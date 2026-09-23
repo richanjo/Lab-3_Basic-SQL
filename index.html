@@ -1,0 +1,1226 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ITP 132 - Basic SQL Query Laboratory</title>
+    <style>
+        :root {
+            --bg-main: #f4f5f7;
+            --panel-bg: #ffffff;
+            --border-color: #d1d5db;
+            --border-dark: #111111;
+            --text-main: #111111;
+            --text-muted: #6b7280;
+            --editor-bg: #111111;
+            --editor-text: #00ff66;
+            --success-bg: #ecfdf5;
+            --success-border: #10b981;
+            --success-text: #047857;
+            --error-bg: #fef2f2;
+            --error-border: #ef4444;
+            --error-text: #b91c1c;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-main);
+            color: var(--text-main);
+            font-size: 11px;
+            line-height: 1.4;
+            padding: 8px;
+        }
+
+        .mono {
+            font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+        }
+
+        .header-bar {
+            background: var(--panel-bg);
+            border: 1px solid var(--border-dark);
+            padding: 8px 12px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+
+        .header-title {
+            font-size: 13px;
+            font-weight: 700;
+            letter-spacing: -0.2px;
+            text-transform: uppercase;
+        }
+
+        .header-sub {
+            font-size: 10px;
+            color: var(--text-muted);
+        }
+
+        .badge-bar {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+        }
+
+        .badge {
+            border: 1px solid var(--border-dark);
+            padding: 3px 6px;
+            font-weight: 600;
+            background: #fff;
+            font-size: 10px;
+        }
+
+        .badge-green {
+            background: #e6f4ea;
+            border-color: #137333;
+            color: #137333;
+        }
+
+        .btn {
+            background: #ffffff;
+            border: 1px solid var(--border-dark);
+            color: var(--text-main);
+            padding: 4px 8px;
+            font-size: 10px;
+            font-weight: 600;
+            cursor: pointer;
+            text-transform: uppercase;
+            transition: all 0.1s ease;
+        }
+
+        .btn:hover {
+            background: #111111;
+            color: #ffffff;
+        }
+
+        .btn-danger {
+            border-color: #dc2626;
+            color: #dc2626;
+        }
+
+        .btn-danger:hover {
+            background: #dc2626;
+            color: #ffffff;
+        }
+
+        .main-layout {
+            display: grid;
+            grid-template-columns: 320px 1fr;
+            gap: 8px;
+        }
+
+        .panel {
+            background: var(--panel-bg);
+            border: 1px solid var(--border-color);
+            padding: 8px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .panel-header {
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+            border-bottom: 1px solid var(--border-dark);
+            padding-bottom: 4px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        /* Problem List Styling */
+        .problem-list {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            max-height: calc(100vh - 120px);
+            overflow-y: auto;
+        }
+
+        .problem-item {
+            border: 1px solid var(--border-color);
+            padding: 6px 8px;
+            cursor: pointer;
+            background: #fafafa;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .problem-item:hover {
+            border-color: var(--border-dark);
+        }
+
+        .problem-item.active {
+            background: #111111;
+            color: #ffffff;
+            border-color: #111111;
+        }
+
+        .problem-item.locked {
+            opacity: 0.5;
+            cursor: not-allowed;
+            background: #f3f4f6;
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            border: 1px solid #111;
+            background: #fff;
+        }
+
+        .status-dot.solved {
+            background: #10b981;
+            border-color: #047857;
+        }
+
+        /* Tab Layout */
+        .tab-bar {
+            display: flex;
+            border-bottom: 1px solid var(--border-dark);
+            gap: 2px;
+            background: #e5e7eb;
+            padding: 2px 2px 0 2px;
+        }
+
+        .tab-btn {
+            padding: 4px 10px;
+            font-size: 10px;
+            font-weight: 600;
+            background: #d1d5db;
+            border: 1px solid var(--border-color);
+            border-bottom: none;
+            cursor: pointer;
+        }
+
+        .tab-btn.active {
+            background: #ffffff;
+            border-color: var(--border-dark);
+            border-bottom: 1px solid #ffffff;
+            margin-bottom: -1px;
+        }
+
+        .tab-content {
+            display: none;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .tab-content.active {
+            display: flex;
+        }
+
+        /* SQL Editor */
+        .editor-container {
+            background: var(--editor-bg);
+            border: 1px solid var(--border-dark);
+            position: relative;
+        }
+
+        textarea.sql-input {
+            width: 100%;
+            height: 120px;
+            background: transparent;
+            color: var(--editor-text);
+            border: none;
+            padding: 8px;
+            font-size: 11px;
+            resize: vertical;
+            outline: none;
+        }
+
+        /* Result Banners */
+        .banner {
+            padding: 8px 12px;
+            border: 1px solid transparent;
+            font-size: 11px;
+            font-weight: 600;
+            display: none;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .banner-success {
+            background: var(--success-bg);
+            border-color: var(--success-border);
+            color: var(--success-text);
+        }
+
+        .banner-error {
+            background: var(--error-bg);
+            border-color: var(--error-border);
+            color: var(--error-text);
+        }
+
+        /* Tables & Viewer */
+        .table-container {
+            max-height: 280px;
+            overflow: auto;
+            border: 1px solid var(--border-color);
+        }
+
+        table.data-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 10px;
+            text-align: left;
+        }
+
+        table.data-table th, table.data-table td {
+            padding: 4px 6px;
+            border: 1px solid #e5e7eb;
+            white-space: nowrap;
+        }
+
+        table.data-table th {
+            background: #f3f4f6;
+            font-weight: 700;
+            position: sticky;
+            top: 0;
+            border-bottom: 1px solid var(--border-dark);
+        }
+
+        table.data-table tr:nth-child(even) {
+            background: #fafafa;
+        }
+
+        /* ERD Diagram Container */
+        .erd-container {
+            background: #ffffff;
+            border: 1px solid var(--border-color);
+            padding: 8px;
+            overflow: auto;
+            text-align: center;
+        }
+
+        .erd-svg {
+            max-width: 100%;
+            height: auto;
+        }
+
+        /* Modal Overlay */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.6);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+
+        .modal-card {
+            background: #ffffff;
+            border: 2px solid #111111;
+            padding: 16px;
+            width: 320px;
+            box-shadow: 4px 4px 0 #111111;
+        }
+
+        .modal-card h3 {
+            font-size: 12px;
+            text-transform: uppercase;
+            margin-bottom: 8px;
+            border-bottom: 1px solid #111;
+            padding-bottom: 4px;
+        }
+
+        .modal-input {
+            width: 100%;
+            padding: 6px;
+            border: 1px solid #111;
+            font-size: 11px;
+            margin-bottom: 12px;
+        }
+
+        .faculty-answer {
+            background: #fffbeeb0;
+            border: 1px solid #f59e0b;
+            padding: 6px 8px;
+            font-size: 10px;
+            margin-top: 4px;
+            color: #92400e;
+        }
+    </style>
+</head>
+<body>
+    <div class="header-bar">
+        <div>
+            <div class="header-title">ITP 132: Advanced Database Systems</div>
+            <div class="header-sub">Basic SQL Query Laboratory: Subject Offering & Student Enrollment System</div>
+        </div>
+        <div class="badge-bar">
+            <div class="badge mono" id="display-student-id">ID: NOT SET</div>
+            <div class="badge mono" id="display-timer">TIME: 00:00:00</div>
+            <div class="badge badge-green mono" id="display-score">SCORE: 0 / 100</div>
+            <button class="btn" onclick="toggleFacultyMode()" id="faculty-btn" style="display: none;">FACULTY MODE: OFF</button>
+            <button class="btn" onclick="exportPNG()">DOWNLOAD PNG</button>
+            <button class="btn btn-danger" onclick="promptReset()">RESET LAB</button>
+        </div>
+    </div>
+
+    <div class="main-layout">
+        <!-- Sidebar Problem Navigator -->
+        <div class="panel">
+            <div class="panel-header">
+                <span>LABORATORY ITEMS (20)</span>
+                <span id="progress-text" class="mono">0/20</span>
+            </div>
+            <div class="problem-list" id="problem-list"></div>
+        </div>
+
+        <!-- Main Workspace -->
+        <div style="display: flex; flex-direction: column; gap: 8px;">
+            <div class="tab-bar">
+                <button class="tab-btn active" onclick="switchTab('workspace')">QUERY EDITOR & RESULT</button>
+                <button class="tab-btn" onclick="switchTab('data')">SAMPLE DATA VIEWER (7 TABLES)</button>
+                <button class="tab-btn" onclick="switchTab('erd')">INTERACTIVE SVG ERD</button>
+            </div>
+
+            <!-- TAB 1: WORKSPACE -->
+            <div id="tab-workspace" class="tab-content active">
+                <div class="panel">
+                    <div class="panel-header">
+                        <span id="item-title">ITEM #1: SELECT ALL STUDENTS</span>
+                        <span class="badge badge-green">+5 PTS</span>
+                    </div>
+                    <p id="item-desc" style="font-size: 11px; font-weight: 500;"></p>
+                    <div id="faculty-box" class="faculty-answer" style="display:none;"></div>
+
+                    <div class="editor-container">
+                        <textarea id="sql-editor" class="sql-input mono" placeholder="Enter your SQL query here... (e.g. SELECT * FROM student;)"></textarea>
+                    </div>
+
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <span style="color: var(--text-muted); font-size: 10px;">Prohibited keywords: INSERT, UPDATE, DELETE, JOIN, DROP, ALTER, TRUNCATE, CREATE</span>
+                        <button class="btn" style="background:#111; color:#fff; padding:6px 16px;" onclick="executeQuery()">EXECUTE SQL</button>
+                    </div>
+
+                    <!-- Banners -->
+                    <div id="banner-success" class="banner banner-success">
+                        <span>✓ QUERY EXECUTED SUCCESSFULLY (+5 PTS AWARDED)</span>
+                        <span class="mono">STATUS: PASSED</span>
+                    </div>
+                    <div id="banner-error" class="banner banner-error">
+                        <span id="error-message">✕ ERROR IN QUERY EXECUTION</span>
+                        <span class="mono">STATUS: FAILED</span>
+                    </div>
+
+                    <!-- Output Table -->
+                    <div class="panel-header" style="margin-top: 4px;">
+                        <span>QUERY RESULTS OUTPUT</span>
+                        <span id="row-count" class="mono">0 ROWS RETURNED</span>
+                    </div>
+                    <div class="table-container" id="output-table-container">
+                        <div style="padding: 16px; text-align: center; color: var(--text-muted);">Execute a valid SQL query to display result set.</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB 2: DATA VIEWER -->
+            <div id="tab-data" class="tab-content">
+                <div class="panel">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <div style="display: flex; gap: 4px;" id="data-table-selector"></div>
+                        <input type="text" id="table-search" placeholder="Search data in current table..." oninput="filterTableData()" style="padding: 4px 8px; border: 1px solid var(--border-dark); font-size: 10px; width: 200px;">
+                    </div>
+                    <div class="table-container" id="viewer-table-container"></div>
+                </div>
+            </div>
+
+            <!-- TAB 3: SVG ERD -->
+            <div id="tab-erd" class="tab-content">
+                <div class="panel">
+                    <div class="panel-header">RELATIONAL ENTITY RELATIONSHIP DIAGRAM (7 TABLES)</div>
+                    <div class="erd-container">
+                        <svg class="erd-svg" viewBox="0 0 900 480" xmlns="http://www.w3.org/2000/svg">
+                            <!-- Background Grid -->
+                            <defs>
+                                <pattern id="grid" width="20" height="20" patternUnits="userSpaceOnUse">
+                                    <path d="M 20 0 L 0 0 0 20" fill="none" stroke="#f0f0f0" stroke-width="1"/>
+                                </pattern>
+                            </defs>
+                            <rect width="100%" height="100%" fill="url(#grid)" />
+
+                            <!-- Relationships / Connecting Lines -->
+                            <path d="M 150 110 L 260 110" stroke="#111" stroke-width="1.5" marker-end="url(#arrow)" />
+                            <path d="M 400 110 L 510 110" stroke="#111" stroke-width="1.5" />
+                            <path d="M 150 290 L 260 290" stroke="#111" stroke-width="1.5" />
+                            <path d="M 330 170 L 330 250" stroke="#111" stroke-width="1.5" />
+                            <path d="M 580 170 L 580 250" stroke="#111" stroke-width="1.5" />
+                            <path d="M 650 110 L 750 110" stroke="#111" stroke-width="1.5" />
+
+                            <!-- Entity 1: student -->
+                            <g transform="translate(20, 40)">
+                                <rect width="130" height="130" fill="#fff" stroke="#111" stroke-width="2" rx="3"/>
+                                <rect width="130" height="22" fill="#111"/>
+                                <text x="65" y="15" fill="#fff" font-size="10" font-weight="bold" text-anchor="middle">student</text>
+                                <text x="8" y="38" font-size="9" font-weight="bold" fill="#000">PK stud_id</text>
+                                <text x="8" y="52" font-size="9">firstname</text>
+                                <text x="8" y="66" font-size="9">middlename</text>
+                                <text x="8" y="80" font-size="9">lastname</text>
+                                <text x="8" y="94" font-size="9">bdate</text>
+                                <text x="8" y="108" font-size="9">sex</text>
+                            </g>
+
+                            <!-- Entity 2: student_semester -->
+                            <g transform="translate(260, 40)">
+                                <rect width="140" height="130" fill="#fff" stroke="#111" stroke-width="2" rx="3"/>
+                                <rect width="140" height="22" fill="#111"/>
+                                <text x="70" y="15" fill="#fff" font-size="10" font-weight="bold" text-anchor="middle">student_semester</text>
+                                <text x="8" y="38" font-size="9" font-weight="bold">PK semstud_id</text>
+                                <text x="8" y="52" font-size="9" fill="#2563eb">FK stud_id</text>
+                                <text x="8" y="66" font-size="9" fill="#2563eb">FK prog_id</text>
+                                <text x="8" y="80" font-size="9" fill="#2563eb">FK acadyear_id</text>
+                                <text x="8" y="94" font-size="9">yearlevel</text>
+                                <text x="8" y="108" font-size="9">isenrolled</text>
+                                <text x="8" y="122" font-size="9">date</text>
+                            </g>
+
+                            <!-- Entity 3: student_course -->
+                            <g transform="translate(260, 250)">
+                                <rect width="140" height="120" fill="#fff" stroke="#111" stroke-width="2" rx="3"/>
+                                <rect width="140" height="22" fill="#111"/>
+                                <text x="70" y="15" fill="#fff" font-size="10" font-weight="bold" text-anchor="middle">student_course</text>
+                                <text x="8" y="38" font-size="9" font-weight="bold">PK studsub_id</text>
+                                <text x="8" y="52" font-size="9" fill="#2563eb">FK semstud_id</text>
+                                <text x="8" y="66" font-size="9" fill="#2563eb">FK offeredcourse_id</text>
+                                <text x="8" y="80" font-size="9">section_id</text>
+                                <text x="8" y="94" font-size="9">grade</text>
+                                <text x="8" y="108" font-size="9">comply_grade</text>
+                            </g>
+
+                            <!-- Entity 4: offered_course -->
+                            <g transform="translate(510, 40)">
+                                <rect width="140" height="150" fill="#fff" stroke="#111" stroke-width="2" rx="3"/>
+                                <rect width="140" height="22" fill="#111"/>
+                                <text x="70" y="15" fill="#fff" font-size="10" font-weight="bold" text-anchor="middle">offered_course</text>
+                                <text x="8" y="38" font-size="9" font-weight="bold">PK offeredcourse_id</text>
+                                <text x="8" y="52" font-size="9" fill="#2563eb">FK prog_id</text>
+                                <text x="8" y="66" font-size="9" fill="#2563eb">FK acadyear_id</text>
+                                <text x="8" y="80" font-size="9">course_code</text>
+                                <text x="8" y="94" font-size="9">course_desc</text>
+                                <text x="8" y="108" font-size="9">lec_unit, lab_unit</text>
+                                <text x="8" y="122" font-size="9">total_units</text>
+                                <text x="8" y="136" font-size="9">day, time, slots</text>
+                            </g>
+
+                            <!-- Entity 5: faculty_subjects -->
+                            <g transform="translate(510, 250)">
+                                <rect width="140" height="110" fill="#fff" stroke="#111" stroke-width="2" rx="3"/>
+                                <rect width="140" height="22" fill="#111"/>
+                                <text x="70" y="15" fill="#fff" font-size="10" font-weight="bold" text-anchor="middle">faculty_subjects</text>
+                                <text x="8" y="38" font-size="9" font-weight="bold">PK facultysub_id</text>
+                                <text x="8" y="52" font-size="9" fill="#2563eb">FK offeredcourse_id</text>
+                                <text x="8" y="66" font-size="9">firstname</text>
+                                <text x="8" y="80" font-size="9">middlename</text>
+                                <text x="8" y="94" font-size="9" fill="#2563eb">FK prog_id</text>
+                            </g>
+
+                            <!-- Entity 6: academic_year -->
+                            <g transform="translate(20, 250)">
+                                <rect width="130" height="100" fill="#fff" stroke="#111" stroke-width="2" rx="3"/>
+                                <rect width="130" height="22" fill="#111"/>
+                                <text x="65" y="15" fill="#fff" font-size="10" font-weight="bold" text-anchor="middle">academic_year</text>
+                                <text x="8" y="38" font-size="9" font-weight="bold">PK acadyear_id</text>
+                                <text x="8" y="52" font-size="9">year</text>
+                                <text x="8" y="66" font-size="9">semester</text>
+                                <text x="8" y="80" font-size="9">isactive</text>
+                            </g>
+
+                            <!-- Entity 7: program -->
+                            <g transform="translate(750, 40)">
+                                <rect width="130" height="90" fill="#fff" stroke="#111" stroke-width="2" rx="3"/>
+                                <rect width="130" height="22" fill="#111"/>
+                                <text x="65" y="15" fill="#fff" font-size="10" font-weight="bold" text-anchor="middle">program</text>
+                                <text x="8" y="38" font-size="9" font-weight="bold">PK prog_id</text>
+                                <text x="8" y="52" font-size="9">code</text>
+                                <text x="8" y="66" font-size="9">description</text>
+                            </g>
+                        </svg>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Student ID Startup Modal -->
+    <div id="student-modal" class="modal-overlay">
+        <div class="modal-card">
+            <h3>STUDENT REGISTRATION</h3>
+            <p style="font-size: 10px; margin-bottom: 8px;">Please enter your Student ID to initialize the laboratory session persistence:</p>
+            <input type="text" id="input-student-id" class="modal-input mono" placeholder="e.g. 2023-10492" autofocus>
+            <button class="btn" style="width: 100%; background: #111; color: #fff; padding: 6px;" onclick="saveStudentID()">START LABORATORY</button>
+        </div>
+    </div>
+
+    <!-- PIN Modal for Reset -->
+    <div id="pin-modal" class="modal-overlay" style="display: none;">
+        <div class="modal-card">
+            <h3>RESET LABORATORY PERSISTENCE</h3>
+            <p style="font-size: 10px; margin-bottom: 8px;">Enter Security PIN Code to reset all item progression and scores:</p>
+            <input type="password" id="input-pin" class="modal-input mono" placeholder="PIN Code">
+            <div style="display: flex; gap: 8px;">
+                <button class="btn" style="flex:1;" onclick="closePinModal()">CANCEL</button>
+                <button class="btn btn-danger" style="flex:1;" onclick="confirmReset()">CONFIRM RESET</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- JS LOGIC ENGINE -->
+    <script>
+        // Relational Schema Sample Tabular Data
+        const DB = {
+            student: [
+                { stud_id: 1, firstname: 'Juan', middlename: 'Santos', lastname: 'Dela Cruz', bdate: '2002-05-14', sex: 'M' },
+                { stud_id: 2, firstname: 'Maria', middlename: 'Reyes', lastname: 'Santos', bdate: '2003-11-20', sex: 'F' },
+                { stud_id: 3, firstname: 'Pedro', middlename: 'Cruz', lastname: 'Penduko', bdate: '2001-03-08', sex: 'M' },
+                { stud_id: 4, firstname: 'Ana', middlename: 'Lim', lastname: 'Gonzales', bdate: '2002-08-25', sex: 'F' },
+                { stud_id: 5, firstname: 'Jose', middlename: 'Dizon', lastname: 'Rizal', bdate: '2000-12-30', sex: 'M' },
+                { stud_id: 6, firstname: 'Clara', middlename: 'Torres', lastname: 'Bautista', bdate: '2003-04-12', sex: 'F' },
+                { stud_id: 7, firstname: 'Mark', middlename: 'Navarro', lastname: 'Flores', bdate: '2002-01-19', sex: 'M' },
+                { stud_id: 8, firstname: 'Grace', middlename: 'Ramos', lastname: 'Garcia', bdate: '2003-07-04', sex: 'F' },
+                { stud_id: 9, firstname: 'John', middlename: 'Aquino', lastname: 'Villanueva', bdate: '2001-09-15', sex: 'M' },
+                { stud_id: 10, firstname: 'Sarah', middlename: 'Mendoza', lastname: 'Castillo', bdate: '2002-06-22', sex: 'F' }
+            ],
+            student_semester: [
+                { semstud_id: 501, stud_id: 1, prog_id: 1, acadyear_id: 3, yearlevel: 3, isenrolled: 1, date: '2024-08-10' },
+                { semstud_id: 502, stud_id: 2, prog_id: 1, acadyear_id: 3, yearlevel: 2, isenrolled: 1, date: '2024-08-11' },
+                { semstud_id: 503, stud_id: 3, prog_id: 2, acadyear_id: 3, yearlevel: 3, isenrolled: 1, date: '2024-08-10' },
+                { semstud_id: 504, stud_id: 4, prog_id: 1, acadyear_id: 3, yearlevel: 1, isenrolled: 1, date: '2024-08-12' },
+                { semstud_id: 505, stud_id: 5, prog_id: 3, acadyear_id: 3, yearlevel: 4, isenrolled: 1, date: '2024-08-09' },
+                { semstud_id: 506, stud_id: 6, prog_id: 2, acadyear_id: 3, yearlevel: 2, isenrolled: 0, date: '2024-08-15' },
+                { semstud_id: 507, stud_id: 7, prog_id: 4, acadyear_id: 3, yearlevel: 1, isenrolled: 1, date: '2024-08-14' },
+                { semstud_id: 508, stud_id: 8, prog_id: 1, acadyear_id: 3, yearlevel: 3, isenrolled: 1, date: '2024-08-11' },
+                { semstud_id: 509, stud_id: 9, prog_id: 2, acadyear_id: 3, yearlevel: 4, isenrolled: 1, date: '2024-08-10' },
+                { semstud_id: 510, stud_id: 10, prog_id: 3, acadyear_id: 3, yearlevel: 2, isenrolled: 1, date: '2024-08-13' }
+            ],
+            student_course: [
+                { studsub_id: 1001, semstud_id: 501, offeredcourse_id: 101, section_id: 'IT3A', grade: 1.25, comply_grade: 'PASSED' },
+                { studsub_id: 1002, semstud_id: 501, offeredcourse_id: 102, section_id: 'IT3A', grade: 1.50, comply_grade: 'PASSED' },
+                { studsub_id: 1003, semstud_id: 502, offeredcourse_id: 102, section_id: 'IT2B', grade: 2.00, comply_grade: 'PASSED' },
+                { studsub_id: 1004, semstud_id: 503, offeredcourse_id: 103, section_id: 'CS3A', grade: 1.75, comply_grade: 'PASSED' },
+                { studsub_id: 1005, semstud_id: 504, offeredcourse_id: 104, section_id: 'IT1A', grade: 2.25, comply_grade: 'PASSED' },
+                { studsub_id: 1006, semstud_id: 505, offeredcourse_id: 105, section_id: 'IS4A', grade: 1.00, comply_grade: 'PASSED' },
+                { studsub_id: 1007, semstud_id: 507, offeredcourse_id: 107, section_id: 'EMC1A', grade: 2.50, comply_grade: 'PASSED' },
+                { studsub_id: 1008, semstud_id: 508, offeredcourse_id: 101, section_id: 'IT3B', grade: 1.50, comply_grade: 'PASSED' },
+                { studsub_id: 1009, semstud_id: 508, offeredcourse_id: 108, section_id: 'IT3B', grade: 1.75, comply_grade: 'PASSED' },
+                { studsub_id: 1010, semstud_id: 509, offeredcourse_id: 106, section_id: 'CS4A', grade: 1.25, comply_grade: 'PASSED' },
+                { studsub_id: 1011, semstud_id: 510, offeredcourse_id: 105, section_id: 'IS2A', grade: 2.00, comply_grade: 'PASSED' },
+                { studsub_id: 1012, semstud_id: 502, offeredcourse_id: 101, section_id: 'IT2B', grade: 3.00, comply_grade: 'PASSED' }
+            ],
+            offered_course: [
+                { offeredcourse_id: 101, prog_id: 1, acadyear_id: 3, course_code: 'ITP 132', course_desc: 'Advanced Database Systems', lec_unit: 2, lab_unit: 1, total_units: 3, day: 'MWF', time: '08:00 AM - 09:00 AM', slots: 40 },
+                { offeredcourse_id: 102, prog_id: 1, acadyear_id: 3, course_code: 'ITP 121', course_desc: 'Data Structures and Algorithms', lec_unit: 2, lab_unit: 1, total_units: 3, day: 'TTH', time: '09:30 AM - 11:00 AM', slots: 35 },
+                { offeredcourse_id: 103, prog_id: 2, acadyear_id: 3, course_code: 'CS 211', course_desc: 'Object-Oriented Programming', lec_unit: 2, lab_unit: 1, total_units: 3, day: 'MWF', time: '10:00 AM - 11:00 AM', slots: 40 },
+                { offeredcourse_id: 104, prog_id: 1, acadyear_id: 3, course_code: 'ITP 143', course_desc: 'Web Development', lec_unit: 2, lab_unit: 1, total_units: 3, day: 'TTH', time: '01:00 PM - 02:30 PM', slots: 30 },
+                { offeredcourse_id: 105, prog_id: 3, acadyear_id: 3, course_code: 'IS 311', course_desc: 'Enterprise Architecture', lec_unit: 3, lab_unit: 0, total_units: 3, day: 'MWF', time: '01:00 PM - 02:00 PM', slots: 45 },
+                { offeredcourse_id: 106, prog_id: 2, acadyear_id: 3, course_code: 'CS 322', course_desc: 'Operating Systems', lec_unit: 2, lab_unit: 1, total_units: 3, day: 'TTH', time: '02:30 PM - 04:00 PM', slots: 35 },
+                { offeredcourse_id: 107, prog_id: 4, acadyear_id: 3, course_code: 'EMC 101', course_desc: 'Introduction to Multimedia', lec_unit: 2, lab_unit: 1, total_units: 3, day: 'MWF', time: '03:00 PM - 04:00 PM', slots: 30 },
+                { offeredcourse_id: 108, prog_id: 1, acadyear_id: 3, course_code: 'ITP 210', course_desc: 'Systems Analysis and Design', lec_unit: 3, lab_unit: 0, total_units: 3, day: 'TTH', time: '04:00 PM - 05:30 PM', slots: 40 }
+            ],
+            academic_year: [
+                { acadyear_id: 1, year: '2023-2024', semester: '1st Semester', isactive: 0 },
+                { acadyear_id: 2, year: '2023-2024', semester: '2nd Semester', isactive: 0 },
+                { acadyear_id: 3, year: '2024-2025', semester: '1st Semester', isactive: 1 },
+                { acadyear_id: 4, year: '2024-2025', semester: '2nd Semester', isactive: 0 }
+            ],
+            faculty_subjects: [
+                { facultysub_id: 1, offeredcourse_id: 101, firstname: 'Roberto', middlename: 'Gomez', prog_id: 1 },
+                { facultysub_id: 2, offeredcourse_id: 102, firstname: 'Elena', middlename: 'Alvarez', prog_id: 1 },
+                { facultysub_id: 3, offeredcourse_id: 103, firstname: 'Carlos', middlename: 'Tan', prog_id: 2 },
+                { facultysub_id: 4, offeredcourse_id: 104, firstname: 'Lourdes', middlename: 'Fernandez', prog_id: 1 },
+                { facultysub_id: 5, offeredcourse_id: 105, firstname: 'Ricardo', middlename: 'Soriano', prog_id: 3 },
+                { facultysub_id: 6, offeredcourse_id: 106, firstname: 'Sofia', middlename: 'Valdez', prog_id: 2 }
+            ],
+            program: [
+                { prog_id: 1, code: 'BSIT', description: 'Bachelor of Science in Information Technology' },
+                { prog_id: 2, code: 'BSCS', description: 'Bachelor of Science in Computer Science' },
+                { prog_id: 3, code: 'BSIS', description: 'Bachelor of Science in Information Systems' },
+                { prog_id: 4, code: 'BSEMC', description: 'Bachelor of Science in Entertainment and Multimedia Computing' }
+            ]
+        };
+
+        // 20 Lab Problems Definition
+        const PROBLEMS = [
+            { id: 1, title: "SELECT ALL STUDENTS", desc: "Retrieve all records from the student table.", query: "SELECT * FROM student;" },
+            { id: 2, title: "FILTER FEMALE STUDENTS", desc: "Select all female students (sex = 'F') displaying stud_id, firstname, and lastname.", query: "SELECT stud_id, firstname, lastname FROM student WHERE sex = 'F';" },
+            { id: 3, title: "COURSES WITH 3 TOTAL UNITS", desc: "Find all offered courses that have exactly 3 total_units.", query: "SELECT course_code, course_desc, total_units FROM offered_course WHERE total_units = 3;" },
+            { id: 4, title: "LASTNAME PATTERN SEARCH", desc: "Search for all students whose lastname starts with 'Dela'.", query: "SELECT * FROM student WHERE lastname LIKE 'Dela%';" },
+            { id: 5, title: "UPPER LEVEL REGISTRATIONS", desc: "Retrieve student semester records for 3rd and 4th year levels using IN.", query: "SELECT * FROM student_semester WHERE yearlevel IN (3, 4);" },
+            { id: 6, title: "SLOTS RANGE SEARCH", desc: "List all offered courses with slots between 30 and 40 using BETWEEN.", query: "SELECT * FROM offered_course WHERE slots BETWEEN 30 AND 40;" },
+            { id: 7, title: "SORT STUDENTS BY LASTNAME", desc: "Display all students ordered alphabetically by lastname in ascending order.", query: "SELECT * FROM student ORDER BY lastname ASC;" },
+            { id: 8, title: "ENROLLMENT COUNT PER SEMSTER", desc: "Count total course enrollments (studsub_id) grouped by semstud_id.", query: "SELECT semstud_id, COUNT(studsub_id) FROM student_course GROUP BY semstud_id;" },
+            { id: 9, title: "SCALAR STRING FUNCTIONS", desc: "Display student names with firstname in UPPERCASE and lastname in LOWERCASE.", query: "SELECT UPPER(firstname), LOWER(lastname) FROM student;" },
+            { id: 10, title: "ACTIVE ACADEMIC YEAR", desc: "Retrieve the active academic year record where isactive equals 1.", query: "SELECT * FROM academic_year WHERE isactive = 1;" },
+            { id: 11, title: "MWF SCHEDULED COURSES", desc: "List course_code and slots for courses offered on 'MWF' schedule.", query: "SELECT course_code, slots FROM offered_course WHERE day = 'MWF';" },
+            { id: 12, title: "ARITHMETIC UNIT TOTAL", desc: "Calculate total units by adding lec_unit and lab_unit for each course.", query: "SELECT course_code, lec_unit + lab_unit AS total_units FROM offered_course;" },
+            { id: 13, title: "TOTAL STUDENT COUNT", desc: "Find the total number of registered students in the student table.", query: "SELECT COUNT(*) FROM student;" },
+            { id: 14, title: "AVERAGE ENROLLED GRADE", desc: "Calculate the average grade of all records in student_course.", query: "SELECT AVG(grade) FROM student_course;" },
+            { id: 15, title: "MAX AND MIN SLOTS", desc: "Find the maximum and minimum available slots across all offered courses.", query: "SELECT MAX(slots), MIN(slots) FROM offered_course;" },
+            { id: 16, title: "HONOR STUDENTS BY GPA", desc: "Find semstud_id records having an average grade <= 2.0 using GROUP BY and HAVING.", query: "SELECT semstud_id, AVG(grade) FROM student_course GROUP BY semstud_id HAVING AVG(grade) <= 2.0;" },
+            { id: 17, title: "FACULTY REGEXP SEARCH", desc: "Find faculty members whose firstname starts with 'R' using REGEXP.", query: "SELECT * FROM faculty_subjects WHERE firstname REGEXP '^R';" },
+            { id: 18, title: "LASTNAME LENGTH ANALYSIS", desc: "List male students with firstname, lastname, and character length of lastname.", query: "SELECT firstname, lastname, LENGTH(lastname) FROM student WHERE sex = 'M';" },
+            { id: 19, title: "FIRST 5 OFFERED COURSES", desc: "Display the first 5 records from the offered_course table using LIMIT.", query: "SELECT * FROM offered_course LIMIT 5;" },
+            { id: 20, title: "PROGRAM DETAILS BY CODE", desc: "Retrieve program details where program code is 'BSIT'.", query: "SELECT * FROM program WHERE code = 'BSIT';" }
+        ];
+
+        // State variables
+        let currentProblemIndex = 0;
+        let solvedStatus = new Array(20).fill(false);
+        let studentID = "";
+        let facultyMode = false;
+        let timerSeconds = 0;
+        let timerInterval = null;
+        let activeViewerTable = "student";
+
+        // Initialization
+        window.onload = function() {
+            loadState();
+            renderProblemList();
+            renderViewerTabs();
+            renderTableViewer(activeViewerTable);
+            selectProblem(0);
+            startTimer();
+        };
+
+        function startTimer() {
+            if (timerInterval) clearInterval(timerInterval);
+            timerInterval = setInterval(() => {
+                timerSeconds++;
+                const hrs = String(Math.floor(timerSeconds / 3600)).padStart(2, '0');
+                const mins = String(Math.floor((timerSeconds % 3600) / 60)).padStart(2, '0');
+                const secs = String(timerSeconds % 60).padStart(2, '0');
+                document.getElementById('display-timer').innerText = `TIME: ${hrs}:${mins}:${secs}`;
+            }, 1000);
+        }
+
+        function saveStudentID() {
+            const val = document.getElementById('input-student-id').value.trim();
+            if (val) {
+                studentID = val;
+                document.getElementById('display-student-id').innerText = `ID: ${studentID}`;
+                document.getElementById('student-modal').style.display = 'none';
+                saveState();
+            }
+        }
+
+        function saveState() {
+            const state = {
+                studentID,
+                solvedStatus,
+                timerSeconds
+            };
+            localStorage.setItem('itp132_sql_lab_state', JSON.stringify(state));
+        }
+
+        function loadState() {
+            const saved = localStorage.getItem('itp132_sql_lab_state');
+            if (saved) {
+                try {
+                    const parsed = JSON.parse(saved);
+                    studentID = parsed.studentID || "";
+                    solvedStatus = parsed.solvedStatus || new Array(20).fill(false);
+                    timerSeconds = parsed.timerSeconds || 0;
+                    if (studentID) {
+                        document.getElementById('display-student-id').innerText = `ID: ${studentID}`;
+                        document.getElementById('student-modal').style.display = 'none';
+                    }
+                } catch(e) {}
+            }
+            updateScoreDisplay();
+        }
+
+        function updateScoreDisplay() {
+            const solvedCount = solvedStatus.filter(Boolean).length;
+            const score = solvedCount * 5;
+            document.getElementById('display-score').innerText = `SCORE: ${score} / 100`;
+            document.getElementById('progress-text').innerText = `${solvedCount}/20`;
+        }
+
+        function renderProblemList() {
+            const container = document.getElementById('problem-list');
+            container.innerHTML = '';
+
+            PROBLEMS.forEach((p, idx) => {
+                const item = document.createElement('div');
+                const isLocked = idx > 0 && !solvedStatus[idx - 1] && !solvedStatus[idx];
+                item.className = `problem-item ${idx === currentProblemIndex ? 'active' : ''} ${isLocked ? 'locked' : ''}`;
+                
+                item.innerHTML = `
+                    <div style="display:flex; align-items:center; gap:8px;">
+                        <div class="status-dot ${solvedStatus[idx] ? 'solved' : ''}"></div>
+                        <span style="font-weight:600;">#${p.id} ${p.title}</span>
+                    </div>
+                    <span class="mono">${solvedStatus[idx] ? '5/5' : '0/5'}</span>
+                `;
+
+                if (!isLocked) {
+                    item.onclick = () => selectProblem(idx);
+                }
+                container.appendChild(item);
+            });
+        }
+
+        function selectProblem(idx) {
+            currentProblemIndex = idx;
+            renderProblemList();
+            const p = PROBLEMS[idx];
+            document.getElementById('item-title').innerText = `ITEM #${p.id}: ${p.title}`;
+            document.getElementById('item-desc').innerText = p.desc;
+            document.getElementById('sql-editor').value = '';
+            document.getElementById('faculty-box').innerText = `FACULTY SOLUTION: ${p.query}`;
+            
+            hideBanners();
+            document.getElementById('output-table-container').innerHTML = `<div style="padding: 16px; text-align: center; color: var(--text-muted);">Execute a valid SQL query to display result set.</div>`;
+            document.getElementById('row-count').innerText = `0 ROWS RETURNED`;
+        }
+
+        function hideBanners() {
+            document.getElementById('banner-success').style.display = 'none';
+            document.getElementById('banner-error').style.display = 'none';
+        }
+
+        function switchTab(tabName) {
+            document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+
+            if (tabName === 'workspace') {
+                document.querySelectorAll('.tab-btn')[0].classList.add('active');
+                document.getElementById('tab-workspace').classList.add('active');
+            } else if (tabName === 'data') {
+                document.querySelectorAll('.tab-btn')[1].classList.add('active');
+                document.getElementById('tab-data').classList.add('active');
+            } else if (tabName === 'erd') {
+                document.querySelectorAll('.tab-btn')[2].classList.add('active');
+                document.getElementById('tab-erd').classList.add('active');
+            }
+        }
+
+        function toggleFacultyMode() {
+            facultyMode = !facultyMode;
+            document.getElementById('faculty-btn').innerText = `FACULTY MODE: ${facultyMode ? 'ON' : 'OFF'}`;
+            document.getElementById('faculty-box').style.display = facultyMode ? 'block' : 'none';
+        }
+
+        // Safe Pure JavaScript SQL Simulator
+        function parseAndExecuteSQL(queryStr) {
+            const raw = queryStr.trim();
+            if (!raw) throw new Error("Empty query string provided.");
+
+            const cleanQuery = raw.replace(/;+$/, '').trim();
+            const upper = cleanQuery.toUpperCase();
+
+            // Check prohibited keywords
+            const prohibited = ['INSERT', 'UPDATE', 'DELETE', 'JOIN', 'DROP', 'ALTER', 'TRUNCATE', 'CREATE'];
+            for (let word of prohibited) {
+                const regex = new RegExp(`\\b${word}\\b`, 'i');
+                if (regex.test(cleanQuery)) {
+                    throw new Error(`Prohibited keyword detected: '${word}'. Modification commands and JOINs are restricted.`);
+                }
+            }
+
+            if (!upper.startsWith("SELECT")) {
+                throw new Error("Only SELECT queries are supported in this laboratory.");
+            }
+
+            // Extract Table Name
+            const fromMatch = upper.match(/\bFROM\s+([a-z0-9_]+)/i);
+            if (!fromMatch) throw new Error("Syntax Error: Missing or invalid FROM clause.");
+            const tableName = fromMatch[1].toLowerCase();
+
+            if (!DB[tableName]) {
+                throw new Error(`Table '${tableName}' does not exist in database schema.`);
+            }
+
+            let dataset = JSON.parse(JSON.stringify(DB[tableName]));
+
+            // WHERE Filtering
+            const whereSplit = cleanQuery.match(/\bWHERE\s+(.*?)(?=\bGROUP\s+BY|\bORDER\s+BY|\bLIMIT|$)/i);
+            if (whereSplit) {
+                const whereClause = whereSplit[1].trim();
+                dataset = filterDataset(dataset, whereClause);
+            }
+
+            // GROUP BY & Aggregates
+            const groupByMatch = cleanQuery.match(/\bGROUP\s+BY\s+([a-z0-9_]+)/i);
+            const selectMatch = cleanQuery.match(/SELECT\s+(.*?)\s+FROM/i);
+            const selectFields = selectMatch ? selectMatch[1].trim() : "*";
+
+            let groupedResult = [];
+            if (groupByMatch) {
+                const groupCol = groupByMatch[1].trim();
+                const groups = {};
+                dataset.forEach(row => {
+                    const key = row[groupCol];
+                    if (!groups[key]) groups[key] = [];
+                    groups[key].push(row);
+                });
+
+                // Check HAVING clause
+                const havingMatch = cleanQuery.match(/\bHAVING\s+(.*?)(?=\bORDER\s+BY|\bLIMIT|$)/i);
+
+                Object.keys(groups).forEach(key => {
+                    const groupRows = groups[key];
+                    const aggregatedRow = {};
+                    aggregatedRow[groupCol] = key;
+
+                    // Evaluate aggregates
+                    if (selectFields.includes("COUNT(")) aggregatedRow["COUNT"] = groupRows.length;
+                    if (selectFields.includes("AVG(")) {
+                        const match = selectFields.match(/AVG\(([a-z0-9_]+)\)/i);
+                        const col = match ? match[1] : null;
+                        if (col) {
+                            const sum = groupRows.reduce((a, b) => a + (parseFloat(b[col]) || 0), 0);
+                            aggregatedRow["AVG"] = (sum / groupRows.length).toFixed(2);
+                        }
+                    }
+
+                    if (havingMatch) {
+                        const hClause = havingMatch[1];
+                        if (hClause.includes("AVG(")) {
+                            const hVal = parseFloat(hClause.match(/<=\s*([0-9.]+)|>=\s*([0-9.]+)|=\s*([0-9.]+)/)[1] || 2.0);
+                            if (parseFloat(aggregatedRow["AVG"]) <= hVal) {
+                                groupedResult.push(aggregatedRow);
+                            }
+                        } else {
+                            groupedResult.push(aggregatedRow);
+                        }
+                    } else {
+                        groupedResult.push(aggregatedRow);
+                    }
+                });
+                return groupedResult;
+            }
+
+            // Evaluate Single Row Aggregates without GROUP BY
+            if (selectFields.toUpperCase().includes("COUNT(") || selectFields.toUpperCase().includes("AVG(") || selectFields.toUpperCase().includes("MAX(") || selectFields.toUpperCase().includes("MIN(")) {
+                const aggRow = {};
+                if (selectFields.toUpperCase().includes("COUNT(*)")) aggRow["COUNT(*)"] = dataset.length;
+                if (selectFields.toUpperCase().includes("AVG(")) {
+                    const match = selectFields.match(/AVG\(([a-z0-9_]+)\)/i);
+                    const col = match ? match[1] : null;
+                    if (col) {
+                        const sum = dataset.reduce((a, b) => a + (parseFloat(b[col]) || 0), 0);
+                        aggRow[`AVG(${col})`] = (sum / dataset.length).toFixed(2);
+                    }
+                }
+                if (selectFields.toUpperCase().includes("MAX(")) {
+                    const match = selectFields.match(/MAX\(([a-z0-9_]+)\)/i);
+                    const col = match ? match[1] : null;
+                    if (col) aggRow[`MAX(${col})`] = Math.max(...dataset.map(r => r[col]));
+                }
+                if (selectFields.toUpperCase().includes("MIN(")) {
+                    const match = selectFields.match(/MIN\(([a-z0-9_]+)\)/i);
+                    const col = match ? match[1] : null;
+                    if (col) aggRow[`MIN(${col})`] = Math.min(...dataset.map(r => r[col]));
+                }
+                return [aggRow];
+            }
+
+            // ORDER BY
+            const orderByMatch = cleanQuery.match(/\bORDER\s+BY\s+([a-z0-9_]+)\s*(ASC|DESC)?/i);
+            if (orderByMatch) {
+                const col = orderByMatch[1];
+                const dir = (orderByMatch[2] || 'ASC').toUpperCase();
+                dataset.sort((a, b) => {
+                    if (a[col] < b[col]) return dir === 'ASC' ? -1 : 1;
+                    if (a[col] > b[col]) return dir === 'ASC' ? 1 : -1;
+                    return 0;
+                });
+            }
+
+            // LIMIT
+            const limitMatch = cleanQuery.match(/\bLIMIT\s+([0-9]+)/i);
+            if (limitMatch) {
+                const count = parseInt(limitMatch[1], 10);
+                dataset = dataset.slice(0, count);
+            }
+
+            // Projection (Column Selection & Functions)
+            if (selectFields !== "*") {
+                const cols = selectFields.split(',').map(s => s.trim());
+                dataset = dataset.map(row => {
+                    const projected = {};
+                    cols.forEach(c => {
+                        if (c.toUpperCase().startsWith("UPPER(")) {
+                            const inner = c.match(/UPPER\(([a-z0-9_]+)\)/i)[1];
+                            projected[`UPPER(${inner})`] = String(row[inner] || '').toUpperCase();
+                        } else if (c.toUpperCase().startsWith("LOWER(")) {
+                            const inner = c.match(/LOWER\(([a-z0-9_]+)\)/i)[1];
+                            projected[`LOWER(${inner})`] = String(row[inner] || '').toLowerCase();
+                        } else if (c.toUpperCase().startsWith("LENGTH(")) {
+                            const inner = c.match(/LENGTH\(([a-z0-9_]+)\)/i)[1];
+                            projected[`LENGTH(${inner})`] = String(row[inner] || '').length;
+                        } else if (c.includes("+")) {
+                            const parts = c.split(/AS/i);
+                            const expr = parts[0].trim();
+                            const alias = parts[1] ? parts[1].trim() : expr;
+                            const terms = expr.split('+').map(t => t.trim());
+                            const val = (parseFloat(row[terms[0]]) || 0) + (parseFloat(row[terms[1]]) || 0);
+                            projected[alias] = val;
+                        } else if (row.hasOwnProperty(c)) {
+                            projected[c] = row[c];
+                        }
+                    });
+                    return projected;
+                });
+            }
+
+            return dataset;
+        }
+
+        function filterDataset(data, clause) {
+            return data.filter(row => {
+                if (clause.includes("LIKE")) {
+                    const [col, pattern] = clause.split(/\s+LIKE\s+/i);
+                    const cleanPattern = pattern.replace(/'/g, '').replace(/%/g, '.*');
+                    const regex = new RegExp(`^${cleanPattern}$`, 'i');
+                    return regex.test(String(row[col.trim()]));
+                }
+                if (clause.includes("REGEXP")) {
+                    const [col, pattern] = clause.split(/\s+REGEXP\s+/i);
+                    const cleanPattern = pattern.replace(/'/g, '');
+                    const regex = new RegExp(cleanPattern, 'i');
+                    return regex.test(String(row[col.trim()]));
+                }
+                if (clause.includes("IN")) {
+                    const match = clause.match(/([a-z0-9_]+)\s+IN\s*\((.*?)\)/i);
+                    if (match) {
+                        const col = match[1].trim();
+                        const vals = match[2].split(',').map(v => v.trim().replace(/'/g, ''));
+                        return vals.includes(String(row[col]));
+                    }
+                }
+                if (clause.includes("BETWEEN")) {
+                    const match = clause.match(/([a-z0-9_]+)\s+BETWEEN\s+([0-9.]+)\s+AND\s+([0-9.]+)/i);
+                    if (match) {
+                        const col = match[1].trim();
+                        const min = parseFloat(match[2]);
+                        const max = parseFloat(match[3]);
+                        const val = parseFloat(row[col]);
+                        return val >= min && val <= max;
+                    }
+                }
+                if (clause.includes("=")) {
+                    const parts = clause.split("=");
+                    const col = parts[0].trim();
+                    const val = parts[1].trim().replace(/'/g, '');
+                    return String(row[col]) === String(val);
+                }
+                return true;
+            });
+        }
+
+        function executeQuery() {
+            hideBanners();
+            const inputSql = document.getElementById('sql-editor').value;
+
+            try {
+                const userResult = parseAndExecuteSQL(inputSql);
+                const targetProblem = PROBLEMS[currentProblemIndex];
+                const expectedResult = parseAndExecuteSQL(targetProblem.query);
+
+                // Render Result Table
+                renderOutputTable(userResult);
+                document.getElementById('row-count').innerText = `${userResult.length} ROWS RETURNED`;
+
+                // Verification Logic
+                const isMatch = JSON.stringify(userResult) === JSON.stringify(expectedResult);
+
+                if (isMatch) {
+                    document.getElementById('banner-success').style.display = 'flex';
+                    if (!solvedStatus[currentProblemIndex]) {
+                        solvedStatus[currentProblemIndex] = true;
+                        updateScoreDisplay();
+                        renderProblemList();
+                        saveState();
+                    }
+                } else {
+                    document.getElementById('banner-error').style.display = 'flex';
+                    document.getElementById('error-message').innerText = "⚠ Query executed successfully, but output does not match expected result requirement.";
+                }
+
+            } catch(err) {
+                document.getElementById('banner-error').style.display = 'flex';
+                document.getElementById('error-message').innerText = `✕ SQL Error: ${err.message}`;
+                document.getElementById('output-table-container').innerHTML = `<div style="padding: 16px; color: var(--error-text); font-weight: 600;">Execution Failed: ${err.message}</div>`;
+                document.getElementById('row-count').innerText = `0 ROWS RETURNED`;
+            }
+        }
+
+        function renderOutputTable(data) {
+            const container = document.getElementById('output-table-container');
+            if (!data || data.length === 0) {
+                container.innerHTML = `<div style="padding: 16px; text-align: center; color: var(--text-muted);">0 records matching query criteria.</div>`;
+                return;
+            }
+
+            const headers = Object.keys(data[0]);
+            let html = `<table class="data-table mono"><thead><tr>`;
+            headers.forEach(h => html += `<th>${h}</th>`);
+            html += `</tr></thead><tbody>`;
+
+            data.forEach(row => {
+                html += `<tr>`;
+                headers.forEach(h => html += `<td>${row[h] !== undefined ? row[h] : ''}</td>`);
+                html += `</tr>`;
+            });
+
+            html += `</tbody></table>`;
+            container.innerHTML = html;
+        }
+
+        function renderViewerTabs() {
+            const container = document.getElementById('data-table-selector');
+            const tables = Object.keys(DB);
+            container.innerHTML = '';
+
+            tables.forEach(t => {
+                const btn = document.createElement('button');
+                btn.className = `btn ${t === activeViewerTable ? 'btn-active' : ''}`;
+                btn.style.fontSize = "9px";
+                if (t === activeViewerTable) btn.style.background = "#111", btn.style.color = "#fff";
+                btn.innerText = t;
+                btn.onclick = () => {
+                    activeViewerTable = t;
+                    renderViewerTabs();
+                    renderTableViewer(t);
+                };
+                container.appendChild(btn);
+            });
+        }
+
+        function renderTableViewer(tableName) {
+            const container = document.getElementById('viewer-table-container');
+            const data = DB[tableName];
+            if (!data) return;
+
+            const headers = Object.keys(data[0]);
+            let html = `<table class="data-table mono" id="viewer-table"><thead><tr>`;
+            headers.forEach(h => html += `<th>${h}</th>`);
+            html += `</tr></thead><tbody>`;
+
+            data.forEach(row => {
+                html += `<tr>`;
+                headers.forEach(h => html += `<td>${row[h]}</td>`);
+                html += `</tr>`;
+            });
+
+            html += `</tbody></table>`;
+            container.innerHTML = html;
+        }
+
+        function filterTableData() {
+            const filter = document.getElementById('table-search').value.toLowerCase();
+            const rows = document.querySelectorAll('#viewer-table tbody tr');
+            rows.forEach(row => {
+                const text = row.innerText.toLowerCase();
+                row.style.display = text.includes(filter) ? '' : 'none';
+            });
+        }
+
+        function promptReset() {
+            document.getElementById('pin-modal').style.display = 'flex';
+        }
+
+        function closePinModal() {
+            document.getElementById('pin-modal').style.display = 'none';
+            document.getElementById('input-pin').value = '';
+        }
+
+        function confirmReset() {
+            const pin = document.getElementById('input-pin').value;
+            if (pin === "0910") {
+                localStorage.removeItem('itp132_sql_lab_state');
+                solvedStatus = new Array(20).fill(false);
+                timerSeconds = 0;
+                studentID = "";
+                closePinModal();
+                document.getElementById('student-modal').style.display = 'flex';
+                updateScoreDisplay();
+                renderProblemList();
+                selectProblem(0);
+            } else {
+                alert("Incorrect PIN code! Reset rejected.");
+            }
+        }
+
+        function exportPNG() {
+            const canvas = document.createElement('canvas');
+            canvas.width = 600;
+            canvas.height = 420;
+            const ctx = canvas.getContext('2d');
+
+            // Background
+            ctx.fillStyle = "#ffffff";
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // Border
+            ctx.strokeStyle = "#111111";
+            ctx.lineWidth = 6;
+            ctx.strokeRect(10, 10, canvas.width - 20, canvas.height - 20);
+
+            // Header Banner
+            ctx.fillStyle = "#111111";
+            ctx.fillRect(20, 20, canvas.width - 40, 50);
+
+            ctx.fillStyle = "#ffffff";
+            ctx.font = "bold 14px monospace";
+            ctx.fillText("ITP 132 - ADVANCED DATABASE SYSTEMS", 35, 42);
+            ctx.font = "11px monospace";
+            ctx.fillText("BASIC SQL QUERY LABORATORY PERFORMANCE REPORT", 35, 58);
+
+            // Student Info
+            ctx.fillStyle = "#111111";
+            ctx.font = "bold 12px monospace";
+            ctx.fillText(`STUDENT ID : ${studentID || 'N/A'}`, 35, 105);
+            ctx.fillText(`TIME ELAPSED: ${document.getElementById('display-timer').innerText.replace('TIME: ', '')}`, 35, 125);
+            ctx.fillText(`FINAL SCORE : ${solvedStatus.filter(Boolean).length * 5} / 100 PTS`, 35, 145);
+
+            // Progress Summary Grid
+            ctx.font = "bold 11px monospace";
+            ctx.fillText("ITEM PROGRESSION BREAKDOWN:", 35, 180);
+
+            PROBLEMS.forEach((p, i) => {
+                const x = 35 + (i % 5) * 110;
+                const y = 205 + Math.floor(i / 5) * 35;
+
+                ctx.fillStyle = solvedStatus[i] ? "#e6f4ea" : "#f3f4f6";
+                ctx.strokeStyle = solvedStatus[i] ? "#137333" : "#d1d5db";
+                ctx.lineWidth = 1;
+                ctx.fillRect(x, y, 100, 25);
+                ctx.strokeRect(x, y, 100, 25);
+
+                ctx.fillStyle = solvedStatus[i] ? "#137333" : "#6b7280";
+                ctx.font = "10px monospace";
+                ctx.fillText(`ITEM #${p.id}: ${solvedStatus[i] ? 'PASS' : '----'}`, x + 10, y + 16);
+            });
+
+            // Footer Stamp
+            ctx.fillStyle = "#6b7280";
+            ctx.font = "9px monospace";
+            ctx.fillText(`VERIFIED BY SQL AUTOMATED EVALUATOR ENGINE | DATE: ${new Date().toISOString().split('T')[0]}`, 35, 385);
+
+            // Trigger Download
+            const link = document.createElement('a');
+            link.download = `SQL_Lab_Result_${studentID || 'Student'}.png`;
+            link.href = canvas.toDataURL();
+            link.click();
+        }
+    </script>
+</body>
+</html>
