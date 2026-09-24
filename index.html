@@ -63,6 +63,23 @@
             color: var(--text-muted);
         }
 
+        .page-footer {
+            background: var(--panel-bg);
+            border: 1px solid var(--border-dark);
+            padding: 6px 12px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 8px;
+            font-size: 10px;
+            color: var(--text-muted);
+        }
+
+        .page-footer .footer-dev {
+            font-weight: 700;
+            color: var(--text-main);
+        }
+
         .badge-bar {
             display: flex;
             gap: 8px;
@@ -108,6 +125,15 @@
         .btn-danger:hover {
             background: #dc2626;
             color: #ffffff;
+        }
+
+        #data-table-selector .btn {
+            text-transform: lowercase;
+        }
+
+        .btn .btn-icon {
+            vertical-align: middle;
+            margin-right: 4px;
         }
 
         .main-layout {
@@ -354,20 +380,207 @@
             margin-top: 4px;
             color: #92400e;
         }
+
+        /* ===== Anti-Inspect / Anti-ViewSource hardening ===== */
+        body.protect-select {
+            -webkit-user-select: none;
+            -moz-user-select: none;
+            -ms-user-select: none;
+            user-select: none;
+        }
+        /* Re-enable selection inside interactive fields */
+        .sql-input, .modal-input, #table-search {
+            -webkit-user-select: text !important;
+            -moz-user-select: text !important;
+            -ms-user-select: text !important;
+            user-select: text !important;
+        }
+        /* Allow selection inside result tables for usability */
+        .table-container, .erd-container {
+            -webkit-user-select: text;
+            -moz-user-select: text;
+            -ms-user-select: text;
+            user-select: text;
+        }
+
+        /* ===== Responsive Mobile ===== */
+        @media (max-width: 900px) {
+            .main-layout {
+                grid-template-columns: 1fr;
+            }
+            .problem-list {
+                max-height: 260px;
+            }
+        }
+        @media (max-width: 768px) {
+            body {
+                padding: 6px;
+            }
+            .header-bar {
+                flex-direction: column;
+                align-items: stretch;
+                gap: 8px;
+            }
+            .badge-bar {
+                flex-wrap: wrap;
+                gap: 6px;
+            }
+            .badge-bar .badge,
+            .badge-bar .btn {
+                font-size: 9px;
+            }
+            #display-student-id, #display-timer, #display-score {
+                flex: 1 1 auto;
+                text-align: center;
+            }
+            .main-layout {
+                grid-template-columns: 1fr;
+            }
+            .panel {
+                padding: 6px;
+            }
+            .tab-bar {
+                overflow-x: auto;
+                -webkit-overflow-scrolling: touch;
+                flex-wrap: nowrap;
+                scrollbar-width: thin;
+            }
+            .tab-btn {
+                white-space: nowrap;
+                flex-shrink: 0;
+            }
+            #tab-data .panel > div:first-child {
+                flex-direction: column;
+                gap: 6px;
+            }
+            #data-table-selector {
+                flex-wrap: wrap;
+            }
+            #table-search {
+                width: 100% !important;
+            }
+            .editor-container textarea.sql-input {
+                height: 140px;
+                font-size: 12px;
+            }
+            .table-container {
+                max-height: 320px;
+            }
+            /* ERD horizontal scroll hint on mobile */
+            .erd-container {
+                padding: 4px;
+            }
+            .erd-svg {
+                min-width: 700px;
+            }
+            .modal-card {
+                width: 92%;
+                max-width: 340px;
+                margin: 12px;
+            }
+            /* Slightly larger tap targets */
+            .problem-item {
+                padding: 8px 10px;
+            }
+            .btn {
+                padding: 6px 10px;
+            }
+        }
+        @media (max-width: 480px) {
+            .header-title {
+                font-size: 11px;
+            }
+            .header-sub {
+                font-size: 9px;
+            }
+        }
     </style>
+    <script>
+        // ===== Anti-ViewSource / Anti-Inspect (best-effort deterrent) =====
+        (function(){
+            // Disable right-click
+            document.addEventListener('contextmenu', function(e){ e.preventDefault(); return false; }, true);
+            // Block common shortcuts: F12, Ctrl+Shift+I/J/C, Ctrl+U/S/P, Cmd variants
+            document.addEventListener('keydown', function(e){
+                var k = e.key ? e.key.toLowerCase() : '';
+                var code = e.keyCode || e.which;
+                // F12
+                if (code === 123) { e.preventDefault(); return false; }
+                // Ctrl/Cmd + Shift + I/J/C
+                if ((e.ctrlKey || e.metaKey) && e.shiftKey && (k === 'i' || k === 'j' || k === 'c')) { e.preventDefault(); return false; }
+                // Ctrl/Cmd + U (view source), S (save), P (print), A/C/V/X allowed? restrict U/S/P only
+                if ((e.ctrlKey || e.metaKey) && (k === 'u' || k === 's' || k === 'p')) { e.preventDefault(); return false; }
+            }, true);
+            // Drag/select deterrent (except inputs)
+            document.addEventListener('dragstart', function(e){ e.preventDefault(); return false; }, true);
+            // DevTools detection (window size + debugger trap) - redirect/blank if opened
+            var devtoolsOpen = false;
+            function detectDevTools(){
+                try {
+                    var wDiff = Math.abs(window.outerWidth - window.innerWidth) > 160;
+                    var hDiff = Math.abs(window.outerHeight - window.innerHeight) > 160;
+                    if ((wDiff && window.outerWidth > 0) || (hDiff && window.outerHeight > 0)) {
+                        devtoolsOpen = true;
+                    }
+                    // Firebug / debugger check via console size
+                    var start = new Date();
+                    // eslint-disable-next-line no-debugger
+                    debugger;
+                    var end = new Date();
+                    if (end - start > 100) devtoolsOpen = true;
+                } catch(e){}
+                if (devtoolsOpen) {
+                    document.body.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100vh;background:#111;color:#fff;font-family:monospace;text-align:center;padding:20px;">Developer tools detected.<br>Inspection is disabled for this laboratory page.<br>Please close DevTools and reload.</div>';
+                }
+            }
+            setInterval(detectDevTools, 1000);
+            // Prevent print/view-source via beforeprint
+            window.addEventListener('beforeprint', function(e){ e.preventDefault(); return false; });
+            // Block browser-preview windows that run inside code editors (best-effort)
+            // Plain-text editors (Notepad, etc.) never execute JS; the file's sensitive data
+            // is obfuscated so those editors expose only cipher text, not the answers.
+            (function(){
+                try {
+                    var ua = (navigator.userAgent || '').toLowerCase();
+                    var tokens = ['simplebrowser', 'vscode', 'brackets', 'atom/', 'sublime', 'phoenix', 'livepreview', 'live-preview'];
+                    var isEditorPreview = tokens.some(function(t){ return ua.indexOf(t) !== -1; });
+                    if (isEditorPreview) {
+                        var lock = document.createElement('div');
+                        lock.id = 'editor-lock';
+                        lock.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:#111;color:#fff;z-index:99999;display:flex;flex-direction:column;align-items:center;justify-content:center;font-family:monospace;text-align:center;padding:24px;';
+                        lock.innerHTML =
+                            '<div style="font-size:16px;font-weight:700;margin-bottom:12px;">ACCESS BLOCKED</div>' +
+                            '<div style="font-size:12px;max-width:430px;margin-bottom:16px;">This laboratory file cannot be opened inside a code editor (VS Code, Notepad, Sublime, Brackets, Atom, etc.).<br><br>Please open this <b>index.html</b> file in a web browser only (Chrome, Edge, Firefox).<br><br>If you are already in a browser, enter the unlock PIN to continue:</div>' +
+                            '<input id="editor-lock-pin" type="password" style="padding:8px;font-size:14px;font-family:monospace;text-align:center;width:180px;margin-bottom:10px;" onkeydown="if(event.key===\'Enter\'){var b=document.getElementById(\'editor-lock\');var p=b.querySelector(\'button\');if(p&&p.onclick)p.onclick();}">' +
+                            '<button style="padding:8px 22px;font-size:12px;font-family:monospace;cursor:pointer;">UNLOCK</button>';
+                        document.documentElement.appendChild(lock);
+                        lock.querySelector('button').onclick = function(){
+                            try {
+                                if (lock.querySelector('#editor-lock-pin').value.trim() === decodeReply('amNrag==')) {
+                                    lock.remove();
+                                } else {
+                                    alert('Incorrect PIN code. Access denied.');
+                                }
+                            } catch(e) { alert('Incorrect PIN code. Access denied.'); }
+                        };
+                    }
+                } catch(e) {}
+            })();
+        })();
+    </script>
 </head>
 <body>
     <div class="header-bar">
         <div>
             <div class="header-title">ITP 132: Advanced Database Systems</div>
-            <div class="header-sub">Basic SQL Query Laboratory: Subject Offering & Student Enrollment System</div>
+            <div class="header-sub">Basic SQL Query Laboratory Activity #3: Subject Offering & Student Enrollment System</div>
         </div>
         <div class="badge-bar">
             <div class="badge mono" id="display-student-id">ID: NOT SET</div>
             <div class="badge mono" id="display-timer">TIME: 00:00:00</div>
             <div class="badge badge-green mono" id="display-score">SCORE: 0 / 100</div>
             <button class="btn" onclick="toggleFacultyMode()" id="faculty-btn" style="display: none;">FACULTY MODE: OFF</button>
-            <button class="btn" onclick="exportPNG()">DOWNLOAD PNG</button>
+            <button class="btn" onclick="openResultModal()">DOWNLOAD RESULT (PNG)</button>
             <button class="btn btn-danger" onclick="promptReset()">RESET LAB</button>
         </div>
     </div>
@@ -406,7 +619,10 @@
 
                     <div style="display: flex; justify-content: space-between; align-items: center;">
                         <span style="color: var(--text-muted); font-size: 10px;">Prohibited keywords: INSERT, UPDATE, DELETE, JOIN, DROP, ALTER, TRUNCATE, CREATE</span>
-                        <button class="btn" style="background:#111; color:#fff; padding:6px 16px;" onclick="executeQuery()">EXECUTE SQL</button>
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <button class="btn" id="btn-next" style="display: none;" onclick="nextProblem()">NEXT ITEM &#9656;</button>
+                            <button class="btn" style="background:#111; color:#fff; padding:6px 16px;" onclick="executeQuery()">EXECUTE SQL</button>
+                        </div>
                     </div>
 
                     <!-- Banners -->
@@ -557,13 +773,20 @@
         </div>
     </div>
 
-    <!-- Student ID Startup Modal -->
-    <div id="student-modal" class="modal-overlay">
+    <!-- Page Footer -->
+    <div class="page-footer">
+        <span>INTEGRATED SQL QUERY LABORATORY &amp; AUTOMATED EVALUATION SYSTEM</span>
+        <span class="footer-dev mono">DEVELOPER: Rich Anjo Capiloyan</span>
+    </div>
+
+    <!-- Student ID Unlock Modal -->
+    <div id="unlock-modal" class="modal-overlay" style="z-index: 5000;">
         <div class="modal-card">
-            <h3>STUDENT REGISTRATION</h3>
-            <p style="font-size: 10px; margin-bottom: 8px;">Please enter your Student ID to initialize the laboratory session persistence:</p>
-            <input type="text" id="input-student-id" class="modal-input mono" placeholder="e.g. 2023-10492" autofocus>
-            <button class="btn" style="width: 100%; background: #111; color: #fff; padding: 6px;" onclick="saveStudentID()">START LABORATORY</button>
+            <h3>LABORATORY UNLOCK</h3>
+            <p style="font-size: 10px; margin-bottom: 8px;">Enter your Student ID Number to unlock and register your session. Opening in external editors (VS Code, Notepad, Sublime, Brackets) is disallowed.</p>
+            <input type="text" id="input-unlock-id" class="modal-input mono" placeholder="e.g. 2023-10492" autofocus onkeydown="if(event.key === 'Enter'){ unlockPage(); }">
+            <div id="unlock-id-error" style="font-size: 10px; color: var(--error-text); font-weight: 700; display: none; margin-bottom: 8px;">Please enter a valid Student ID Number.</div>
+            <button class="btn" style="width: 100%; background: #111; color: #fff; padding: 6px;" onclick="unlockPage()">UNLOCK &amp; START LABORATORY</button>
         </div>
     </div>
 
@@ -580,8 +803,39 @@
         </div>
     </div>
 
+    <!-- Result Summary Modal -->
+    <div id="result-modal" class="modal-overlay" style="display: none;">
+        <div class="modal-card" style="width: 460px; max-width: 94%;">
+            <h3>LABORATORY RESULT SUMMARY</h3>
+            <div id="result-summary-content" style="font-size: 11px; margin-bottom: 12px;"></div>
+            <div style="margin-bottom: 10px;">
+                <div style="font-size: 10px; font-weight: 700; text-transform: uppercase; margin-bottom: 4px;">FACULTY VERIFICATION (REQUIRED)</div>
+                <input type="text" id="input-faculty-name" class="modal-input mono" placeholder="Enter faculty member name" style="margin-bottom: 4px;" onkeydown="if(event.key === 'Enter'){ downloadResult(); }">
+                <div style="font-size: 9px; color: var(--text-muted); margin-bottom: 2px;">All-lowercase or all-uppercase input is accepted; sentence case must match exactly.</div>
+                <div id="faculty-verify-error" style="font-size: 10px; color: var(--error-text); font-weight: 700; display: none;">Invalid faculty name. Download blocked.</div>
+            </div>
+            <div style="display: flex; gap: 8px; align-items: center; justify-content: flex-end;">
+                <button class="btn" style="flex:1;" onclick="closeResultModal()">CLOSE</button>
+                <button class="btn" style="flex:1.5; background:#111; color:#fff; display:inline-flex; align-items:center; justify-content:center;" onclick="downloadResult()">
+                    <svg class="btn-icon" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                    DOWNLOAD PNG
+                </button>
+            </div>
+        </div>
+    </div>
+
     <!-- JS LOGIC ENGINE -->
     <script>
+        // Runtime decoder for protected lab data (XOR 0x5A + Base64).
+        // Answers and PINs are stored obfuscated so the source stays unreadable in plain text editors.
+        function decodeReply(b64) {
+            let bin = "";
+            try { bin = atob(b64); } catch(e) { return ""; }
+            const bytes = new Uint8Array(bin.length);
+            for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i) ^ 0x5A;
+            return new TextDecoder().decode(bytes);
+        }
+
         // Relational Schema Sample Tabular Data
         const DB = {
             student: [
@@ -654,47 +908,129 @@
             ]
         };
 
-        // 20 Lab Problems Definition
+// 20 Lab Problems Definition
         const PROBLEMS = [
-            { id: 1, title: "SELECT ALL STUDENTS", desc: "Retrieve all records from the student table.", query: "SELECT * FROM student;" },
-            { id: 2, title: "FILTER FEMALE STUDENTS", desc: "Select all female students (sex = 'F') displaying stud_id, firstname, and lastname.", query: "SELECT stud_id, firstname, lastname FROM student WHERE sex = 'F';" },
-            { id: 3, title: "COURSES WITH 3 TOTAL UNITS", desc: "Find all offered courses that have exactly 3 total_units.", query: "SELECT course_code, course_desc, total_units FROM offered_course WHERE total_units = 3;" },
-            { id: 4, title: "LASTNAME PATTERN SEARCH", desc: "Search for all students whose lastname starts with 'Dela'.", query: "SELECT * FROM student WHERE lastname LIKE 'Dela%';" },
-            { id: 5, title: "UPPER LEVEL REGISTRATIONS", desc: "Retrieve student semester records for 3rd and 4th year levels using IN.", query: "SELECT * FROM student_semester WHERE yearlevel IN (3, 4);" },
-            { id: 6, title: "SLOTS RANGE SEARCH", desc: "List all offered courses with slots between 30 and 40 using BETWEEN.", query: "SELECT * FROM offered_course WHERE slots BETWEEN 30 AND 40;" },
-            { id: 7, title: "SORT STUDENTS BY LASTNAME", desc: "Display all students ordered alphabetically by lastname in ascending order.", query: "SELECT * FROM student ORDER BY lastname ASC;" },
-            { id: 8, title: "ENROLLMENT COUNT PER SEMSTER", desc: "Count total course enrollments (studsub_id) grouped by semstud_id.", query: "SELECT semstud_id, COUNT(studsub_id) FROM student_course GROUP BY semstud_id;" },
-            { id: 9, title: "SCALAR STRING FUNCTIONS", desc: "Display student names with firstname in UPPERCASE and lastname in LOWERCASE.", query: "SELECT UPPER(firstname), LOWER(lastname) FROM student;" },
-            { id: 10, title: "ACTIVE ACADEMIC YEAR", desc: "Retrieve the active academic year record where isactive equals 1.", query: "SELECT * FROM academic_year WHERE isactive = 1;" },
-            { id: 11, title: "MWF SCHEDULED COURSES", desc: "List course_code and slots for courses offered on 'MWF' schedule.", query: "SELECT course_code, slots FROM offered_course WHERE day = 'MWF';" },
-            { id: 12, title: "ARITHMETIC UNIT TOTAL", desc: "Calculate total units by adding lec_unit and lab_unit for each course.", query: "SELECT course_code, lec_unit + lab_unit AS total_units FROM offered_course;" },
-            { id: 13, title: "TOTAL STUDENT COUNT", desc: "Find the total number of registered students in the student table.", query: "SELECT COUNT(*) FROM student;" },
-            { id: 14, title: "AVERAGE ENROLLED GRADE", desc: "Calculate the average grade of all records in student_course.", query: "SELECT AVG(grade) FROM student_course;" },
-            { id: 15, title: "MAX AND MIN SLOTS", desc: "Find the maximum and minimum available slots across all offered courses.", query: "SELECT MAX(slots), MIN(slots) FROM offered_course;" },
-            { id: 16, title: "HONOR STUDENTS BY GPA", desc: "Find semstud_id records having an average grade <= 2.0 using GROUP BY and HAVING.", query: "SELECT semstud_id, AVG(grade) FROM student_course GROUP BY semstud_id HAVING AVG(grade) <= 2.0;" },
-            { id: 17, title: "FACULTY REGEXP SEARCH", desc: "Find faculty members whose firstname starts with 'R' using REGEXP.", query: "SELECT * FROM faculty_subjects WHERE firstname REGEXP '^R';" },
-            { id: 18, title: "LASTNAME LENGTH ANALYSIS", desc: "List male students with firstname, lastname, and character length of lastname.", query: "SELECT firstname, lastname, LENGTH(lastname) FROM student WHERE sex = 'M';" },
-            { id: 19, title: "FIRST 5 OFFERED COURSES", desc: "Display the first 5 records from the offered_course table using LIMIT.", query: "SELECT * FROM offered_course LIMIT 5;" },
-            { id: 20, title: "PROGRAM DETAILS BY CODE", desc: "Retrieve program details where program code is 'BSIT'.", query: "SELECT * FROM program WHERE code = 'BSIT';" }
+            { id: 1, title: "SELECT ALL STUDENTS", desc: "Retrieve all records from the student table.", query: decodeReply("CR8WHxkOenB6HAgVF3opLi8+PzQuYQ==") },
+            { id: 2, title: "FILTER FEMALE STUDENTS", desc: "Select all female students (sex = 'F') displaying stud_id, firstname, and lastname.", query: decodeReply("CR8WHxkOeikuLz4FMz52ejwzKCkuNDs3P3Z6NjspLjQ7Nz96HAgVF3opLi8+PzQueg0SHwgfeik/Inpnen0cfWE=") },
+            { id: 3, title: "COURSES WITH 3 TOTAL UNITS", desc: "Find all offered courses that have exactly 3 total_units displaying code, description and total units.", query: decodeReply("CR8WHxkOejk1LygpPwU5NT4/dno5NS8oKT8FPj8pOXZ6LjUuOzYFLzQzLil6HAgVF3o1PDw/KD8+BTk1LygpP3oNEh8IH3ouNS47NgUvNDMuKXpnemlh") },
+            { id: 4, title: "LASTNAME PATTERN SEARCH", desc: "Search for all students whose lastname starts with 'Dela'.", query: decodeReply("CR8WHxkOenB6HAgVF3opLi8+PzQueg0SHwgfejY7KS40Ozc/ehYTER96fR4/Njt/fWE=") },
+            { id: 5, title: "UPPER LEVEL REGISTRATIONS", desc: "Retrieve student semester records for 3rd and 4th year levels using IN.", query: decodeReply("CR8WHxkOenB6HAgVF3opLi8+PzQuBSk/Nz8pLj8oeg0SHwgfeiM/Oyg2Pyw/NnoTFHpyaXZ6bnNh") },
+            { id: 6, title: "SLOTS RANGE SEARCH", desc: "List all offered courses with slots between 30 and 40 using BETWEEN.", query: decodeReply("CR8WHxkOenB6HAgVF3o1PDw/KD8+BTk1LygpP3oNEh8IH3opNjUuKXoYHw4NHx8UemlqehsUHnpuamE=") },
+            { id: 7, title: "SORT STUDENTS BY LASTNAME", desc: "Display all students ordered alphabetically by lastname in ascending order.", query: decodeReply("CR8WHxkOenB6HAgVF3opLi8+PzQuehUIHh8IehgDejY7KS40Ozc/ehsJGWE=") },
+            { id: 8, title: "ENROLLMENT COUNT PER SEMSTER", desc: "Count total course enrollments (studsub_id) grouped by semstud_id.", query: decodeReply("CR8WHxkOeik/NykuLz4FMz52ehkVDxQOcikuLz4pLzgFMz5zehwIFRd6KS4vPj80LgU5NS8oKT96HQgVDwp6GAN6KT83KS4vPgUzPmE=") },
+            { id: 9, title: "SCALAR STRING FUNCTIONS", desc: "Display student names with firstname in UPPERCASE and lastname in LOWERCASE.", query: decodeReply("CR8WHxkOeg8KCh8IcjwzKCkuNDs3P3N2ehYVDR8IcjY7KS40Ozc/c3ocCBUXeikuLz4/NC5h") },
+            { id: 10, title: "ACTIVE ACADEMIC YEAR", desc: "Retrieve the active academic year record where isactive equals 1.", query: decodeReply("CR8WHxkOenB6HAgVF3o7OTs+PzczOQUjPzsoeg0SHwgfejMpOzkuMyw/emd6a2E=") },
+            { id: 11, title: "MWF SCHEDULED COURSES", desc: "List course_code and slots for courses offered on 'MWF' schedule.", query: decodeReply("CR8WHxkOejk1LygpPwU5NT4/dnopNjUuKXocCBUXejU8PD8oPz4FOTUvKCk/eg0SHwgfej47I3pnen0XDRx9YQ==") },
+            { id: 12, title: "ARITHMETIC UNIT TOTAL", desc: "Calculate total units by adding lec_unit and lab_unit for each course.", query: decodeReply("CR8WHxkOejk1LygpPwU5NT4/dno2PzkFLzQzLnpxejY7OAUvNDMuehsJei41Ljs2BS80My4pehwIFRd6NTw8Pyg/PgU5NS8oKT9h") },
+            { id: 13, title: "TOTAL STUDENT COUNT", desc: "Find the total number of registered students in the student table.", query: decodeReply("CR8WHxkOehkVDxQOcnBzehwIFRd6KS4vPj80LmE=") },
+            { id: 14, title: "AVERAGE ENROLLED GRADE", desc: "Calculate the average grade of all records in student_course.", query: decodeReply("CR8WHxkOehsMHXI9KDs+P3N6HAgVF3opLi8+PzQuBTk1LygpP2E=") },
+            { id: 15, title: "MAX AND MIN SLOTS", desc: "Find the maximum and minimum available slots across all offered courses.", query: decodeReply("CR8WHxkOehcbAnIpNjUuKXN2ehcTFHIpNjUuKXN6HAgVF3o1PDw/KD8+BTk1LygpP2E=") },
+            { id: 16, title: "HONOR STUDENTS BY GPA", desc: "Find semstud_id records having an average grade <= 2.0 using GROUP BY and HAVING.", query: decodeReply("CR8WHxkOeik/NykuLz4FMz52ehsMHXI9KDs+P3N6HAgVF3opLi8+PzQuBTk1LygpP3odCBUPCnoYA3opPzcpLi8+BTM+ehIbDBMUHXobDB1yPSg7Pj9zemZnemh0amE=") },
+            { id: 17, title: "FACULTY REGEXP SEARCH", desc: "Find faculty members whose firstname starts with 'R' using REGEXP.", query: decodeReply("CR8WHxkOenB6HAgVF3o8OzkvNi4jBSkvODA/OS4peg0SHwgfejwzKCkuNDs3P3oIHx0fAgp6fQQIfWE=") },
+            { id: 18, title: "LASTNAME LENGTH ANALYSIS", desc: "List male students with firstname, lastname, and character length of lastname.", query: decodeReply("CR8WHxkOejwzKCkuNDs3P3Z6NjspLjQ7Nz92ehYfFB0OEnI2OykuNDs3P3N6HAgVF3opLi8+PzQueg0SHwgfeik/Inpnen0XfWE=") },
+            { id: 19, title: "FIRST 5 OFFERED COURSES", desc: "Display the first 5 records from the offered_course table using LIMIT.", query: decodeReply("CR8WHxkOenB6HAgVF3o1PDw/KD8+BTk1LygpP3oWExcTDnpvYQ==") },
+            { id: 20, title: "PROGRAM DETAILS BY CODE", desc: "Retrieve program details where program code is 'BSIT'.", query: decodeReply("CR8WHxkOenB6HAgVF3oqKDU9KDs3eg0SHwgfejk1Pj96Z3p9GAkTDn1h") }
         ];
 
-        // State variables
-        let currentProblemIndex = 0;
-        let solvedStatus = new Array(20).fill(false);
+        // ===== Priority Shuffle: 1-5 fixed, 6-20 shuffled + numbers always sorted ASC + everything cached =====
+        const CACHE_KEY = 'itp132_sql_lab_state';
+        let displayOrder = []; // array of {displayId, originalId, title, desc, query}
+        let displayMapping = null; // length 20, mapping[displayIdx] = originalId
+
+        function shuffleArray(arr) {
+            const a = arr.slice();
+            for (let i = a.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                const tmp = a[i]; a[i] = a[j]; a[j] = tmp;
+            }
+            return a;
+        }
+        function buildMapping(persistedMapping, persistedIdsLegacy) {
+            // Migrate legacy displayOrderIds (shuffled ids with 1-5 fixed but unsorted display)
+            // Legacy held array of 20 originalIds in display order (unsorted). Convert to mapping where display is sorted ASC.
+            // For new logic we want displayId always sorted ASC 1..20, so mapping[0..4]=1..5 and mapping[5..19]= shuffled 6..20
+            if (Array.isArray(persistedMapping) && persistedMapping.length === 20) {
+                const sortedFirstFive = persistedMapping.slice(0,5).join(',') === '1,2,3,4,5';
+                const rest = persistedMapping.slice(5);
+                const restSet = new Set(rest);
+                if (sortedFirstFive && restSet.size === 15 && rest.every(v => v >= 6 && v <= 20)) {
+                    return persistedMapping.slice(); // already valid sorted-label mapping
+                }
+            }
+            if (Array.isArray(persistedIdsLegacy) && persistedIdsLegacy.length === 20) {
+                // Old shuffled display order: [1,2,3,4,5, random 6-20]. Need to convert to sorted-label mapping.
+                // Take the shuffled pool 6-20 and reassign to sorted positions 6-20 so labels stay ASC but content shuffled.
+                const pool = persistedIdsLegacy.slice(5);
+                const mapping = [1,2,3,4,5].concat(pool);
+                // Ensure mapping length 20 and first five are 1..5 (already). This keeps shuffled content but now labels ASC.
+                return mapping;
+            }
+            // Fresh: fixed 1-5, shuffle 6-20 pool -> mapping sorted ASC
+            const pool = PROBLEMS.slice(5).map(p=>p.id);
+            const shuffledPool = shuffleArray(pool);
+            return [1,2,3,4,5].concat(shuffledPool);
+        }
+        function buildDisplayOrderFromMapping(mapping) {
+            const baseMap = new Map(PROBLEMS.map(p => [p.id, p]));
+            return mapping.map((origId, idx) => {
+                const base = baseMap.get(origId);
+                return {
+                    displayId: idx + 1, // always sorted ASC 1..20
+                    originalId: origId,
+                    title: base.title,
+                    desc: base.desc,
+                    query: base.query
+                };
+            });
+        }
+        // Legacy helper for compatibility (unused for new mapping, kept for fallback)
+        function buildDisplayOrder(persistedIds) {
+            const m = buildMapping(null, persistedIds);
+            return buildDisplayOrderFromMapping(m);
+        }
+
+        // State variables (all cached)
+        let currentProblemIndex = 0; // index in displayOrder (0..19) == displayId-1
+        let solvedStatus = new Array(20).fill(false); // per displayId position (sorted ASC)
         let studentID = "";
         let facultyMode = false;
         let timerSeconds = 0;
         let timerInterval = null;
         let activeViewerTable = "student";
+        let verifiedFacultyName = "";
 
         // Initialization
         window.onload = function() {
             loadState();
+            if (!displayMapping || displayMapping.length !== 20) {
+                displayMapping = buildMapping(null, null);
+                displayOrder = buildDisplayOrderFromMapping(displayMapping);
+                saveState();
+            } else {
+                displayOrder = buildDisplayOrderFromMapping(displayMapping);
+            }
             renderProblemList();
             renderViewerTabs();
             renderTableViewer(activeViewerTable);
-            selectProblem(0);
+            // restore last active item from cache (clamped)
+            if (typeof currentProblemIndex === 'number' && currentProblemIndex >= 0 && currentProblemIndex < 20) {
+                selectProblem(currentProblemIndex);
+            } else {
+                selectProblem(0);
+            }
             startTimer();
+            // persist cache periodically and on visibility changes
+            document.body.classList.add('protect-select');
+            document.addEventListener('selectstart', function(e){
+                const t = e.target;
+                if (t.closest && (t.closest('input, textarea, [contenteditable]') || t.closest('.table-container') || t.closest('.erd-container') || t.isContentEditable)) return;
+                if (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA') return;
+                e.preventDefault();
+            }, true);
+            // Cache everything on tab hide / close
+            document.addEventListener('visibilitychange', function(){ if (document.visibilityState === 'hidden') saveState(); });
+            window.addEventListener('beforeunload', saveState);
+            window.addEventListener('pagehide', saveState);
         };
 
         function startTimer() {
@@ -705,43 +1041,82 @@
                 const mins = String(Math.floor((timerSeconds % 3600) / 60)).padStart(2, '0');
                 const secs = String(timerSeconds % 60).padStart(2, '0');
                 document.getElementById('display-timer').innerText = `TIME: ${hrs}:${mins}:${secs}`;
+                // cache timer every 5s to avoid excessive writes but ensure persistence
+                if (timerSeconds % 5 === 0) saveState();
             }, 1000);
         }
 
-        function saveStudentID() {
-            const val = document.getElementById('input-student-id').value.trim();
-            if (val) {
-                studentID = val;
+        function unlockPage() {
+            const id = document.getElementById('input-unlock-id').value.trim();
+            if (id && /^[A-Za-z0-9][A-Za-z0-9-]*$/.test(id) && id.length >= 3) {
+                studentID = id;
                 document.getElementById('display-student-id').innerText = `ID: ${studentID}`;
-                document.getElementById('student-modal').style.display = 'none';
+                document.getElementById('unlock-modal').style.display = 'none';
+                document.getElementById('unlock-id-error').style.display = 'none';
                 saveState();
+            } else {
+                document.getElementById('unlock-id-error').style.display = 'block';
             }
         }
 
         function saveState() {
-            const state = {
-                studentID,
-                solvedStatus,
-                timerSeconds
-            };
-            localStorage.setItem('itp132_sql_lab_state', JSON.stringify(state));
+            try {
+                // Clamp and cache everything
+                const state = {
+                    studentID,
+                    solvedStatus,
+                    timerSeconds,
+                    displayMapping, // new: sorted ASC labels 1..20, content shuffled 6-20
+                    displayOrderIds: displayMapping || (displayOrder && displayOrder.length ? displayOrder.map(p=>p.displayId ? p.originalId : p.id) : null), // legacy fallback
+                    currentProblemIndex,
+                    activeViewerTable,
+                    facultyMode,
+                    _v: 2
+                };
+                localStorage.setItem(CACHE_KEY, JSON.stringify(state));
+                // also keep legacy key for backward compat
+                localStorage.setItem('itp132_sql_lab_state', JSON.stringify(state));
+            } catch(e) {}
         }
 
         function loadState() {
-            const saved = localStorage.getItem('itp132_sql_lab_state');
-            if (saved) {
-                try {
-                    const parsed = JSON.parse(saved);
+            let persistedMapping = null;
+            let persistedIdsLegacy = null;
+            let restoredIdx = null;
+            let restoredTable = null;
+            let restoredFaculty = null;
+            try {
+                const raw = localStorage.getItem(CACHE_KEY) || localStorage.getItem('itp132_sql_lab_state');
+                if (raw) {
+                    const parsed = JSON.parse(raw);
                     studentID = parsed.studentID || "";
-                    solvedStatus = parsed.solvedStatus || new Array(20).fill(false);
-                    timerSeconds = parsed.timerSeconds || 0;
+                    solvedStatus = Array.isArray(parsed.solvedStatus) && parsed.solvedStatus.length === 20 ? parsed.solvedStatus : new Array(20).fill(false);
+                    timerSeconds = Number.isFinite(parsed.timerSeconds) ? parsed.timerSeconds : 0;
+                    persistedMapping = Array.isArray(parsed.displayMapping) ? parsed.displayMapping : null;
+                    persistedIdsLegacy = Array.isArray(parsed.displayOrderIds) ? parsed.displayOrderIds : null;
+                    restoredIdx = Number.isInteger(parsed.currentProblemIndex) ? parsed.currentProblemIndex : null;
+                    restoredTable = typeof parsed.activeViewerTable === 'string' ? parsed.activeViewerTable : null;
+                    restoredFaculty = typeof parsed.facultyMode === 'boolean' ? parsed.facultyMode : null;
                     if (studentID) {
-                        document.getElementById('display-student-id').innerText = `ID: ${studentID}`;
-                        document.getElementById('student-modal').style.display = 'none';
+                        const el = document.getElementById('display-student-id');
+                        if (el) el.innerText = `ID: ${studentID}`;
+                        const modal = document.getElementById('unlock-modal');
+                        if (modal) modal.style.display = 'none';
                     }
-                } catch(e) {}
-            }
+                }
+            } catch(e) {}
+            displayMapping = buildMapping(persistedMapping, persistedIdsLegacy);
+            displayOrder = buildDisplayOrderFromMapping(displayMapping);
+            if (restoredIdx !== null) currentProblemIndex = Math.max(0, Math.min(19, restoredIdx));
+            if (restoredTable && DB[restoredTable]) activeViewerTable = restoredTable;
+            if (restoredFaculty !== null) facultyMode = restoredFaculty;
+            // ensure timer display sync
             updateScoreDisplay();
+            // reflect facultyMode UI if body already rendered
+            const fb = document.getElementById('faculty-btn');
+            if (fb) fb.innerText = `FACULTY MODE: ${facultyMode ? 'ON' : 'OFF'}`;
+            const fbox = document.getElementById('faculty-box');
+            if (fbox) fbox.style.display = facultyMode ? 'block' : 'none';
         }
 
         function updateScoreDisplay() {
@@ -755,38 +1130,53 @@
             const container = document.getElementById('problem-list');
             container.innerHTML = '';
 
-            PROBLEMS.forEach((p, idx) => {
+            const order = (displayOrder && displayOrder.length) ? displayOrder : buildDisplayOrderFromMapping(displayMapping || buildMapping(null,null));
+            // Numbers always sorted ASC: displayId 1..20 (fixed 1-5 + shuffled 6-20 content behind sorted labels)
+            order.forEach((p, displayIdx) => {
+                const currSolved = solvedStatus[displayIdx]; // per display position ASC
+                const prevSolved = displayIdx === 0 ? true : solvedStatus[displayIdx - 1];
+                const isLocked = displayIdx > 0 && !prevSolved && !currSolved;
                 const item = document.createElement('div');
-                const isLocked = idx > 0 && !solvedStatus[idx - 1] && !solvedStatus[idx];
-                item.className = `problem-item ${idx === currentProblemIndex ? 'active' : ''} ${isLocked ? 'locked' : ''}`;
+                item.className = `problem-item ${displayIdx === currentProblemIndex ? 'active' : ''} ${isLocked ? 'locked' : ''}`;
                 
                 item.innerHTML = `
                     <div style="display:flex; align-items:center; gap:8px;">
-                        <div class="status-dot ${solvedStatus[idx] ? 'solved' : ''}"></div>
-                        <span style="font-weight:600;">#${p.id} ${p.title}</span>
+                        <div class="status-dot ${currSolved ? 'solved' : ''}"></div>
+                        <span style="font-weight:600;">#${p.displayId} ${p.title}</span>
                     </div>
-                    <span class="mono">${solvedStatus[idx] ? '5/5' : '0/5'}</span>
+                    <span class="mono">${currSolved ? '5/5' : '0/5'}</span>
                 `;
 
                 if (!isLocked) {
-                    item.onclick = () => selectProblem(idx);
+                    item.onclick = () => selectProblem(displayIdx);
                 }
                 container.appendChild(item);
             });
         }
 
-        function selectProblem(idx) {
-            currentProblemIndex = idx;
+        function selectProblem(displayIdx) {
+            // clamp before save
+            const order0 = (displayOrder && displayOrder.length) ? displayOrder : buildDisplayOrderFromMapping(displayMapping || buildMapping(null,null));
+            if (displayIdx < 0) displayIdx = 0;
+            if (displayIdx >= order0.length) displayIdx = order0.length - 1;
+            currentProblemIndex = displayIdx;
+            saveState();
+            const order = (displayOrder && displayOrder.length) ? displayOrder : buildDisplayOrderFromMapping(displayMapping || buildMapping(null,null));
             renderProblemList();
-            const p = PROBLEMS[idx];
-            document.getElementById('item-title').innerText = `ITEM #${p.id}: ${p.title}`;
+            const p = order[displayIdx];
+            document.getElementById('item-title').innerText = `ITEM #${p.displayId}: ${p.title}`;
             document.getElementById('item-desc').innerText = p.desc;
             document.getElementById('sql-editor').value = '';
             document.getElementById('faculty-box').innerText = `FACULTY SOLUTION: ${p.query}`;
+            // keep faculty visibility synced
+            document.getElementById('faculty-box').style.display = facultyMode ? 'block' : 'none';
             
             hideBanners();
             document.getElementById('output-table-container').innerHTML = `<div style="padding: 16px; text-align: center; color: var(--text-muted);">Execute a valid SQL query to display result set.</div>`;
             document.getElementById('row-count').innerText = `0 ROWS RETURNED`;
+            // Reset NEXT button until item is answered correctly again
+            const nextBtn = document.getElementById('btn-next');
+            if (nextBtn) { nextBtn.style.display = 'none'; nextBtn.disabled = false; }
         }
 
         function hideBanners() {
@@ -808,12 +1198,14 @@
                 document.querySelectorAll('.tab-btn')[2].classList.add('active');
                 document.getElementById('tab-erd').classList.add('active');
             }
+            saveState();
         }
 
         function toggleFacultyMode() {
             facultyMode = !facultyMode;
             document.getElementById('faculty-btn').innerText = `FACULTY MODE: ${facultyMode ? 'ON' : 'OFF'}`;
             document.getElementById('faculty-box').style.display = facultyMode ? 'block' : 'none';
+            saveState();
         }
 
         // Safe Pure JavaScript SQL Simulator
@@ -1030,8 +1422,10 @@
             const inputSql = document.getElementById('sql-editor').value;
 
             try {
+                // Semicolon optional: parseAndExecuteSQL strips trailing ; automatically
                 const userResult = parseAndExecuteSQL(inputSql);
-                const targetProblem = PROBLEMS[currentProblemIndex];
+                const order = (displayOrder && displayOrder.length) ? displayOrder : buildDisplayOrderFromMapping(displayMapping || buildMapping(null,null));
+                const targetProblem = order[currentProblemIndex] || displayOrder[currentProblemIndex];
                 const expectedResult = parseAndExecuteSQL(targetProblem.query);
 
                 // Render Result Table
@@ -1043,20 +1437,34 @@
 
                 if (isMatch) {
                     document.getElementById('banner-success').style.display = 'flex';
-                    if (!solvedStatus[currentProblemIndex]) {
-                        solvedStatus[currentProblemIndex] = true;
+                    // solvedStatus is per display position ASC (displayId-1) so shuffle with sorted numbers stays consistent
+                    const displayIdx = currentProblemIndex;
+                    if (!solvedStatus[displayIdx]) {
+                        solvedStatus[displayIdx] = true;
                         updateScoreDisplay();
                         renderProblemList();
                         saveState();
                     }
+                    // Show NEXT button after a correct answer
+                    const nextBtn = document.getElementById('btn-next');
+                    if (nextBtn) {
+                        const isLast = displayIdx >= displayOrder.length - 1;
+                        nextBtn.style.display = 'inline-block';
+                        nextBtn.disabled = isLast;
+                        nextBtn.innerText = isLast ? 'END OF LAB' : 'NEXT ITEM \u25B6';
+                    }
                 } else {
                     document.getElementById('banner-error').style.display = 'flex';
                     document.getElementById('error-message').innerText = "⚠ Query executed successfully, but output does not match expected result requirement.";
+                    const nb = document.getElementById('btn-next');
+                    if (nb) nb.style.display = 'none';
                 }
 
             } catch(err) {
                 document.getElementById('banner-error').style.display = 'flex';
                 document.getElementById('error-message').innerText = `✕ SQL Error: ${err.message}`;
+                const nb = document.getElementById('btn-next');
+                if (nb) nb.style.display = 'none';
                 document.getElementById('output-table-container').innerHTML = `<div style="padding: 16px; color: var(--error-text); font-weight: 600;">Execution Failed: ${err.message}</div>`;
                 document.getElementById('row-count').innerText = `0 ROWS RETURNED`;
             }
@@ -1097,6 +1505,7 @@
                 btn.innerText = t;
                 btn.onclick = () => {
                     activeViewerTable = t;
+                    saveState();
                     renderViewerTabs();
                     renderTableViewer(t);
                 };
@@ -1144,18 +1553,97 @@
 
         function confirmReset() {
             const pin = document.getElementById('input-pin').value;
-            if (pin === "0910") {
+            if (pin === decodeReply("amNrag==")) {
+                localStorage.removeItem(CACHE_KEY);
                 localStorage.removeItem('itp132_sql_lab_state');
                 solvedStatus = new Array(20).fill(false);
                 timerSeconds = 0;
                 studentID = "";
+                currentProblemIndex = 0;
+                // generate fresh shuffled order for next session (1-5 fixed, 6-20 reshuffled) with sorted ASC labels
+                displayMapping = buildMapping(null, null);
+                displayOrder = buildDisplayOrderFromMapping(displayMapping);
                 closePinModal();
-                document.getElementById('student-modal').style.display = 'flex';
+                document.getElementById('unlock-modal').style.display = 'flex';
+                document.getElementById('input-unlock-id').value = '';
                 updateScoreDisplay();
                 renderProblemList();
                 selectProblem(0);
+                saveState();
             } else {
                 alert("Incorrect PIN code! Reset rejected.");
+            }
+        }
+
+        function formatDateTime(d) {
+            const pad = n => String(n).padStart(2, '0');
+            let hours = d.getHours();
+            const ampm = hours >= 12 ? 'PM' : 'AM';
+            hours = hours % 12;
+            hours = hours ? hours : 12;
+            return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(hours)}:${pad(d.getMinutes())}:${pad(d.getSeconds())} ${ampm}`;
+        }
+
+        function downloadResult() {
+            const correct = "Rich Anjo Capiloyan";
+            const val = document.getElementById('input-faculty-name').value.trim();
+            const allLower = val === val.toLowerCase();
+            const allUpper = val === val.toUpperCase();
+            const matches = val === correct ||
+                (allLower && val.toLowerCase() === correct.toLowerCase()) ||
+                (allUpper && val.toUpperCase() === correct.toUpperCase());
+            if (matches) {
+                document.getElementById('faculty-verify-error').style.display = 'none';
+                verifiedFacultyName = val;
+                closeResultModal();
+                exportPNG();
+            } else {
+                document.getElementById('faculty-verify-error').style.display = 'block';
+            }
+        }
+
+        function openResultModal() {
+            const solvedCount = solvedStatus.filter(Boolean).length;
+            const score = solvedCount * 5;
+            const timer = document.getElementById('display-timer').innerText.replace('TIME: ', '');
+            const downloadedAt = formatDateTime(new Date());
+
+            let gridHtml = '';
+            PROBLEMS.forEach(p => {
+                const solved = solvedStatus[displayMapping.indexOf(p.id)] || false;
+                gridHtml += `<div style="border:1px solid ${solved ? '#137333' : '#d1d5db'};background:${solved ? '#e6f4ea' : '#f3f4f6'};padding:4px 4px;font-size:9px;color:${solved ? '#137333' : '#6b7280'};font-weight:600;text-align:center;">ITEM #${p.id}: ${solved ? 'PASS' : '----'}</div>`;
+            });
+
+            document.getElementById('result-summary-content').innerHTML = `
+                <div style="background:#111;color:#fff;padding:8px 10px;font-weight:700;font-size:12px;margin-bottom:10px;border:1px solid #111;">
+                    ITP 132 - ADVANCED DATABASE SYSTEMS
+                    <div style="font-size:9px;font-weight:400;margin-top:2px;">BASIC SQL QUERY LABORATORY PERFORMANCE REPORT</div>
+                </div>
+                <div style="font-size:11px;margin-bottom:10px;display:flex;flex-direction:column;gap:4px;">
+                    <div><strong>STUDENT ID:</strong> <span class="mono">${studentID || 'N/A'}</span></div>
+                    <div><strong>TIME ELAPSED:</strong> <span class="mono">${timer}</span></div>
+                    <div><strong>FINAL SCORE:</strong> <span class="mono">${score} / 100 PTS</span></div>
+                    <div><strong>DOWNLOADED ON:</strong> <span class="mono">${downloadedAt}</span></div>
+                </div>
+                <div style="font-weight:700;font-size:11px;margin-bottom:6px;">ITEM PROGRESSION BREAKDOWN:</div>
+                <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:4px;margin-bottom:12px;">${gridHtml}</div>
+            `;
+            document.getElementById('result-modal').style.display = 'flex';
+            // Reset faculty verification state on open
+            const fn = document.getElementById('input-faculty-name');
+            if (fn) fn.value = '';
+            const fer = document.getElementById('faculty-verify-error');
+            if (fer) fer.style.display = 'none';
+        }
+
+        function closeResultModal() {
+            document.getElementById('result-modal').style.display = 'none';
+        }
+
+        function nextProblem() {
+            const nextIdx = currentProblemIndex + 1;
+            if (nextIdx < displayOrder.length) {
+                selectProblem(nextIdx);
             }
         }
 
@@ -1190,6 +1678,7 @@
             ctx.fillText(`STUDENT ID : ${studentID || 'N/A'}`, 35, 105);
             ctx.fillText(`TIME ELAPSED: ${document.getElementById('display-timer').innerText.replace('TIME: ', '')}`, 35, 125);
             ctx.fillText(`FINAL SCORE : ${solvedStatus.filter(Boolean).length * 5} / 100 PTS`, 35, 145);
+            ctx.fillText(`FACULTY NAME: ${verifiedFacultyName || 'N/A'}`, 35, 165);
 
             // Progress Summary Grid
             ctx.font = "bold 11px monospace";
@@ -1198,22 +1687,23 @@
             PROBLEMS.forEach((p, i) => {
                 const x = 35 + (i % 5) * 110;
                 const y = 205 + Math.floor(i / 5) * 35;
+                const solved = solvedStatus[displayMapping.indexOf(p.id)] || false;
 
-                ctx.fillStyle = solvedStatus[i] ? "#e6f4ea" : "#f3f4f6";
-                ctx.strokeStyle = solvedStatus[i] ? "#137333" : "#d1d5db";
+                ctx.fillStyle = solved ? "#e6f4ea" : "#f3f4f6";
+                ctx.strokeStyle = solved ? "#137333" : "#d1d5db";
                 ctx.lineWidth = 1;
                 ctx.fillRect(x, y, 100, 25);
                 ctx.strokeRect(x, y, 100, 25);
 
-                ctx.fillStyle = solvedStatus[i] ? "#137333" : "#6b7280";
+                ctx.fillStyle = solved ? "#137333" : "#6b7280";
                 ctx.font = "10px monospace";
-                ctx.fillText(`ITEM #${p.id}: ${solvedStatus[i] ? 'PASS' : '----'}`, x + 10, y + 16);
+                ctx.fillText(`ITEM #${p.id}: ${solved ? 'PASS' : '----'}`, x + 10, y + 16);
             });
 
             // Footer Stamp
             ctx.fillStyle = "#6b7280";
             ctx.font = "9px monospace";
-            ctx.fillText(`VERIFIED BY SQL AUTOMATED EVALUATOR ENGINE | DATE: ${new Date().toISOString().split('T')[0]}`, 35, 385);
+            ctx.fillText(`VERIFIED BY SQL AUTOMATED EVALUATOR ENGINE | DOWNLOADED: ${formatDateTime(new Date())}`, 35, 385);
 
             // Trigger Download
             const link = document.createElement('a');
