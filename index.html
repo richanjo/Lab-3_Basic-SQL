@@ -210,6 +210,11 @@
             border-color: #047857;
         }
 
+        .status-dot.skipped {
+            background: #f59e0b;
+            border-color: #b45309;
+        }
+
         /* Tab Layout */
         .tab-bar {
             display: flex;
@@ -620,8 +625,9 @@
                     <div style="display: flex; justify-content: space-between; align-items: center;">
                         <span style="color: var(--text-muted); font-size: 10px;">Prohibited keywords: INSERT, UPDATE, DELETE, JOIN, DROP, ALTER, TRUNCATE, CREATE</span>
                         <div style="display: flex; align-items: center; gap: 8px;">
-                            <button class="btn" id="btn-next" style="display: none;" onclick="nextProblem()">NEXT ITEM &#9656;</button>
                             <button class="btn" style="background:#111; color:#fff; padding:6px 16px;" onclick="executeQuery()">EXECUTE SQL</button>
+                            <button class="btn" id="btn-next" style="display: none;" onclick="nextProblem()">NEXT ITEM &#9656;</button>
+                            <button class="btn" id="btn-skip" onclick="skipProblem()">SKIP ITEM &#9656;</button>
                         </div>
                     </div>
 
@@ -779,14 +785,39 @@
         <span class="footer-dev mono">DEVELOPER: Rich Anjo Capiloyan</span>
     </div>
 
+    <!-- Laboratory Open Code Modal -->
+    <div id="lab-code-modal" class="modal-overlay" style="z-index: 6000;">
+        <div class="modal-card">
+            <h3>LABORATORY OPEN CODE</h3>
+            <p style="font-size: 10px; margin-bottom: 8px;">This laboratory is locked. Enter the open code given by your instructor to open the laboratory.</p>
+            <div style="display: flex; align-items: center; gap: 4px; width: 100%; margin-bottom: 8px;">
+                <input type="password" id="input-lab-code" class="modal-input mono" placeholder="Enter lab open code" style="flex: 1; margin-bottom: 0;" autofocus onkeydown="if(event.key === 'Enter'){ submitLabCode(); }">
+                <button type="button" id="toggle-lab-code" class="btn" style="flex: none; width: 34px; height: 30px; padding: 4px; display: inline-flex; align-items: center; justify-content: center; background: transparent; border: 1px solid #111;" title="Show / hide code" onclick="toggleLabCodeView()">
+                    <svg id="toggle-lab-code-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                </button>
+            </div>
+            <div id="lab-code-error" style="font-size: 10px; color: var(--error-text); font-weight: 700; display: none; margin-bottom: 8px;">Incorrect open code. Access denied.</div>
+            <button class="btn" style="width: 100%; background: #111; color: #fff; padding: 6px;" onclick="submitLabCode()">OPEN LABORATORY</button>
+        </div>
+    </div>
+
     <!-- Student ID Unlock Modal -->
-    <div id="unlock-modal" class="modal-overlay" style="z-index: 5000;">
+    <div id="unlock-modal" class="modal-overlay" style="z-index: 5000; display: none;">
         <div class="modal-card">
             <h3>LABORATORY UNLOCK</h3>
             <p style="font-size: 10px; margin-bottom: 8px;">Enter your Student ID Number to unlock and register your session. Opening in external editors (VS Code, Notepad, Sublime, Brackets) is disallowed.</p>
             <input type="text" id="input-unlock-id" class="modal-input mono" placeholder="e.g. 2023-10492" autofocus onkeydown="if(event.key === 'Enter'){ unlockPage(); }">
             <div id="unlock-id-error" style="font-size: 10px; color: var(--error-text); font-weight: 700; display: none; margin-bottom: 8px;">Please enter a valid Student ID Number.</div>
             <button class="btn" style="width: 100%; background: #111; color: #fff; padding: 6px;" onclick="unlockPage()">UNLOCK &amp; START LABORATORY</button>
+        </div>
+    </div>
+
+    <!-- 5-Second Countdown Modal -->
+    <div id="timer-modal" class="modal-overlay" style="z-index: 6000; display: none;">
+        <div class="modal-card" style="text-align: center;">
+            <h3>LABORATORY UNLOCKED</h3>
+            <p style="font-size: 11px; margin-bottom: 10px;">You may begin answering once the countdown finishes.</p>
+            <div id="countdown-display" class="mono" style="font-size: 44px; font-weight: 800; line-height: 1;">5</div>
         </div>
     </div>
 
@@ -992,12 +1023,14 @@
         // State variables (all cached)
         let currentProblemIndex = 0; // index in displayOrder (0..19) == displayId-1
         let solvedStatus = new Array(20).fill(false); // per displayId position (sorted ASC)
+        let skippedStatus = new Array(20).fill(false); // items skipped by the student but still answerable
         let studentID = "";
         let facultyMode = false;
         let timerSeconds = 0;
         let timerInterval = null;
         let activeViewerTable = "student";
         let verifiedFacultyName = "";
+        let labOpened = false;
 
         // Initialization
         window.onload = function() {
@@ -1054,9 +1087,64 @@
                 document.getElementById('unlock-modal').style.display = 'none';
                 document.getElementById('unlock-id-error').style.display = 'none';
                 saveState();
+                startCountdown(5);
             } else {
                 document.getElementById('unlock-id-error').style.display = 'block';
             }
+        }
+
+        let labCountdown = null;
+
+        function toggleLabCodeView() {
+            const input = document.getElementById('input-lab-code');
+            const icon = document.getElementById('toggle-lab-code-icon');
+            const revealing = input.type === 'password';
+            input.type = revealing ? 'text' : 'password';
+            if (icon) {
+                icon.innerHTML = revealing
+                    ? '<path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/><path d="M14.12 14.12a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/>'
+                    : '<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>';
+            }
+            input.focus();
+        }
+
+        function submitLabCode() {
+            const entered = document.getElementById('input-lab-code').value.trim();
+            if (entered === decodeReply('Ki0/Pj96ND16Nzs0PTsoOyo=')) {
+                labOpened = true;
+                saveState();
+                document.getElementById('lab-code-modal').style.display = 'none';
+                document.getElementById('lab-code-error').style.display = 'none';
+                if (studentID) {
+                    startCountdown(5);
+                } else {
+                    document.getElementById('unlock-modal').style.display = 'flex';
+                    const input = document.getElementById('input-unlock-id');
+                    if (input) input.focus();
+                }
+            } else {
+                document.getElementById('lab-code-error').style.display = 'block';
+                document.getElementById('input-lab-code').value = '';
+                document.getElementById('input-lab-code').focus();
+            }
+        }
+
+        function startCountdown(seconds) {
+            const modal = document.getElementById('timer-modal');
+            const display = document.getElementById('countdown-display');
+            if (labCountdown) clearInterval(labCountdown);
+            modal.style.display = 'flex';
+            display.innerText = String(seconds);
+            labCountdown = setInterval(() => {
+                seconds--;
+                if (seconds <= 0) {
+                    clearInterval(labCountdown);
+                    labCountdown = null;
+                    modal.style.display = 'none';
+                } else {
+                    display.innerText = String(seconds);
+                }
+            }, 1000);
         }
 
         function saveState() {
@@ -1065,12 +1153,14 @@
                 const state = {
                     studentID,
                     solvedStatus,
+                    skippedStatus,
                     timerSeconds,
                     displayMapping, // new: sorted ASC labels 1..20, content shuffled 6-20
                     displayOrderIds: displayMapping || (displayOrder && displayOrder.length ? displayOrder.map(p=>p.displayId ? p.originalId : p.id) : null), // legacy fallback
                     currentProblemIndex,
                     activeViewerTable,
                     facultyMode,
+                    labOpened,
                     _v: 2
                 };
                 localStorage.setItem(CACHE_KEY, JSON.stringify(state));
@@ -1091,17 +1181,26 @@
                     const parsed = JSON.parse(raw);
                     studentID = parsed.studentID || "";
                     solvedStatus = Array.isArray(parsed.solvedStatus) && parsed.solvedStatus.length === 20 ? parsed.solvedStatus : new Array(20).fill(false);
+                    skippedStatus = Array.isArray(parsed.skippedStatus) && parsed.skippedStatus.length === 20 ? parsed.skippedStatus : new Array(20).fill(false);
                     timerSeconds = Number.isFinite(parsed.timerSeconds) ? parsed.timerSeconds : 0;
                     persistedMapping = Array.isArray(parsed.displayMapping) ? parsed.displayMapping : null;
                     persistedIdsLegacy = Array.isArray(parsed.displayOrderIds) ? parsed.displayOrderIds : null;
                     restoredIdx = Number.isInteger(parsed.currentProblemIndex) ? parsed.currentProblemIndex : null;
                     restoredTable = typeof parsed.activeViewerTable === 'string' ? parsed.activeViewerTable : null;
                     restoredFaculty = typeof parsed.facultyMode === 'boolean' ? parsed.facultyMode : null;
+                    labOpened = typeof parsed.labOpened === 'boolean' ? parsed.labOpened : false;
+                    if (labOpened) {
+                        const codeModal = document.getElementById('lab-code-modal');
+                        if (codeModal) codeModal.style.display = 'none';
+                    }
                     if (studentID) {
                         const el = document.getElementById('display-student-id');
                         if (el) el.innerText = `ID: ${studentID}`;
                         const modal = document.getElementById('unlock-modal');
                         if (modal) modal.style.display = 'none';
+                    } else if (labOpened) {
+                        const modal = document.getElementById('unlock-modal');
+                        if (modal) modal.style.display = 'flex';
                     }
                 }
             } catch(e) {}
@@ -1134,17 +1233,18 @@
             // Numbers always sorted ASC: displayId 1..20 (fixed 1-5 + shuffled 6-20 content behind sorted labels)
             order.forEach((p, displayIdx) => {
                 const currSolved = solvedStatus[displayIdx]; // per display position ASC
-                const prevSolved = displayIdx === 0 ? true : solvedStatus[displayIdx - 1];
-                const isLocked = displayIdx > 0 && !prevSolved && !currSolved;
+                const currSkipped = skippedStatus[displayIdx];
+                const prevPassed = displayIdx === 0 ? true : (solvedStatus[displayIdx - 1] || skippedStatus[displayIdx - 1]);
+                const isLocked = displayIdx > 0 && !prevPassed && !currSolved;
                 const item = document.createElement('div');
                 item.className = `problem-item ${displayIdx === currentProblemIndex ? 'active' : ''} ${isLocked ? 'locked' : ''}`;
                 
                 item.innerHTML = `
                     <div style="display:flex; align-items:center; gap:8px;">
-                        <div class="status-dot ${currSolved ? 'solved' : ''}"></div>
+                        <div class="status-dot ${currSolved ? 'solved' : (currSkipped ? 'skipped' : '')}"></div>
                         <span style="font-weight:600;">#${p.displayId} ${p.title}</span>
                     </div>
-                    <span class="mono">${currSolved ? '5/5' : '0/5'}</span>
+                    <span class="mono">${currSolved ? '5/5' : (currSkipped ? 'SKIP' : '0/5')}</span>
                 `;
 
                 if (!isLocked) {
@@ -1177,6 +1277,13 @@
             // Reset NEXT button until item is answered correctly again
             const nextBtn = document.getElementById('btn-next');
             if (nextBtn) { nextBtn.style.display = 'none'; nextBtn.disabled = false; }
+            // SKIP button: always available, disabled on the last item
+            const skipBtn = document.getElementById('btn-skip');
+            if (skipBtn) {
+                const isLast = displayIdx >= order.length - 1;
+                skipBtn.disabled = isLast;
+                skipBtn.innerText = isLast ? 'END OF LAB' : 'SKIP ITEM \u25B6';
+            }
         }
 
         function hideBanners() {
@@ -1441,6 +1548,7 @@
                     const displayIdx = currentProblemIndex;
                     if (!solvedStatus[displayIdx]) {
                         solvedStatus[displayIdx] = true;
+                        skippedStatus[displayIdx] = false;
                         updateScoreDisplay();
                         renderProblemList();
                         saveState();
@@ -1647,6 +1755,15 @@
             }
         }
 
+        function skipProblem() {
+            const displayIdx = currentProblemIndex;
+            if (solvedStatus[displayIdx]) return;
+            skippedStatus[displayIdx] = true;
+            saveState();
+            renderProblemList();
+            nextProblem();
+        }
+
         function exportPNG() {
             const canvas = document.createElement('canvas');
             canvas.width = 600;
@@ -1664,29 +1781,30 @@
 
             // Header Banner
             ctx.fillStyle = "#111111";
-            ctx.fillRect(20, 20, canvas.width - 40, 50);
+            ctx.fillRect(20, 20, canvas.width - 40, 70);
 
             ctx.fillStyle = "#ffffff";
             ctx.font = "bold 14px monospace";
-            ctx.fillText("ITP 132 - ADVANCED DATABASE SYSTEMS", 35, 42);
+            ctx.fillText("ITP 132 - ADVANCED DATABASE SYSTEMS", 35, 40);
             ctx.font = "11px monospace";
-            ctx.fillText("BASIC SQL QUERY LABORATORY PERFORMANCE REPORT", 35, 58);
+            ctx.fillText("BASIC SQL QUERY LABORATORY ACTIVITY #3", 35, 56);
+            ctx.fillText("SUBJECT OFFERING & STUDENT ENROLLMENT SYSTEM", 35, 72);
 
             // Student Info
             ctx.fillStyle = "#111111";
             ctx.font = "bold 12px monospace";
-            ctx.fillText(`STUDENT ID : ${studentID || 'N/A'}`, 35, 105);
-            ctx.fillText(`TIME ELAPSED: ${document.getElementById('display-timer').innerText.replace('TIME: ', '')}`, 35, 125);
-            ctx.fillText(`FINAL SCORE : ${solvedStatus.filter(Boolean).length * 5} / 100 PTS`, 35, 145);
-            ctx.fillText(`FACULTY NAME: ${verifiedFacultyName || 'N/A'}`, 35, 165);
+            ctx.fillText(`STUDENT ID : ${studentID || 'N/A'}`, 35, 100);
+            ctx.fillText(`TIME ELAPSED: ${document.getElementById('display-timer').innerText.replace('TIME: ', '')}`, 35, 120);
+            ctx.fillText(`FINAL SCORE : ${solvedStatus.filter(Boolean).length * 5} / 100 PTS`, 35, 140);
+            ctx.fillText(`FACULTY NAME: ${verifiedFacultyName || 'N/A'}`, 35, 160);
 
             // Progress Summary Grid
             ctx.font = "bold 11px monospace";
-            ctx.fillText("ITEM PROGRESSION BREAKDOWN:", 35, 180);
+            ctx.fillText("ITEM PROGRESSION BREAKDOWN:", 35, 176);
 
             PROBLEMS.forEach((p, i) => {
                 const x = 35 + (i % 5) * 110;
-                const y = 205 + Math.floor(i / 5) * 35;
+                const y = 200 + Math.floor(i / 5) * 35;
                 const solved = solvedStatus[displayMapping.indexOf(p.id)] || false;
 
                 ctx.fillStyle = solved ? "#e6f4ea" : "#f3f4f6";
